@@ -115,3 +115,14 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+/* Deslocamento bem lento, pra tela de login -- os elementos de fundo "passam"
+   devagar, nunca param, mas são discretos o bastante pra não brigar com o
+   formulário (ver LoginBackground.tsx). */
+@keyframes drift {
+  from { transform: translateX(-6%); }
+  to { transform: translateX(6%); }
+}
+.animate-drift {
+  animation: drift 50s ease-in-out infinite alternate;
+}
