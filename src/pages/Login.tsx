@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { LogoChip } from '@/components/LogoChip';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -24,9 +25,9 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm p-6">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold">Portal do Franqueado</h1>
-          <p className="text-sm text-muted-foreground">Franquia IDM PSI</p>
+        <div className="mb-6 flex flex-col items-center gap-3">
+          <LogoChip className="h-14" />
+          <p className="text-sm text-muted-foreground">Portal do Franqueado</p>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="space-y-1.5">
