@@ -45,12 +45,14 @@ Recorrência/renegociação, fluxo de caixa por turma, dashboard de
 inadimplência, **repasse e royalties pra franqueadora**, comissionamento de
 closer/SDR. Integração com Asaas / Galax Pay / Conta Azul, extrato em TXT.
 
-**O que já existe neste projeto:** `franquia_dre_lancamentos` (DRE) e
-`franquia_notas_fiscais`. **Falta:** campo/cálculo de royalties sobre
-receita, fluxo de caixa POR TURMA (hoje o DRE é só por unidade, não por
-turma -- precisa de uma tabela `franquia_turmas` primeiro, que também serve
-pro módulo 2 e 4), dashboard de inadimplência, comissionamento, as 3
-integrações externas.
+**O que já existe neste projeto:** DRE e solicitação de notas fiscais.
+Etapa 1 implementada no código: `franquia_turmas`, cadastro/edição de lançamentos,
+filtro de DRE e caixa realizado por turma, baixa integral e configuração mensal
+de royalties estimados (base por caixa ou competência, percentual explícito).
+**Pendente para ativar:** aplicar `0003_turmas_financeiro.sql` no Supabase da
+franquia e validar com contas reais. Ver `docs/ETAPA_1_FINANCEIRO.md`.
+**Ainda falta:** pagamentos parciais, fechamento/cobrança/repasse de royalties,
+dashboard de inadimplência, comissionamento e integrações externas.
 
 **Referência no CRM interno:** `Financeiro.tsx`, pasta `finance/`
 (`Socios.tsx`, `BalancoConfigForm.tsx`), `ComissoesFechamento.tsx` -- a
@@ -120,12 +122,12 @@ pra fazer uma de cada vez sem travar o resto.
 
 ## Ordem sugerida (meu palpite, Pedro decide)
 
-Dependências reais: os módulos 4, 5 e 7 precisam que **turmas** exista como
-conceito primeiro (hoje este projeto só tem unidade, não tem turma dentro da
-unidade). Sugestão de sequência:
+Dependências reais: os módulos 4, 5 e 7 precisam de **turmas** dentro da unidade.
+A estrutura agora está implementada na migration 0003, ainda pendente de aplicação
+no banco remoto. Sugestão de sequência:
 
 1. **Módulo 3 (parte 2):** `franquia_turmas` + fluxo de caixa por turma +
-   royalties -- extensão direta do que já existe, maior ROI imediato.
+   royalties -- implementado localmente; ativar e validar conforme o guia da etapa 1.
 2. **Módulo 1:** funil comercial -- é o que mais parece com um produto "novo"
    que o franqueado sente que ganhou.
 3. **Módulo 2:** ficha do aluno + turmas/vagas (a parte de frequência/evasão
@@ -134,3 +136,14 @@ unidade). Sugestão de sequência:
 5. **Módulos 4, 5, 7, 8** -- nessa ordem ou conforme a prioridade do negócio
    mudar; 7 e partes de 8 (WhatsApp) ficam mais baratas depois que 1 e 2
    existirem.
+
+## Passagem de trabalho — etapa 1
+
+O Codex implementou a etapa financeira inicial, com testes de regras monetárias,
+RLS/GRANT/auditoria no Postgres local e interface com dados simulados. A migration
+0003 também corrige os snapshots da auditoria (`TG_OP` é maiúsculo) e bloqueia
+usuários inativos nas funções de acesso. Nenhuma alteração foi aplicada ao banco
+remoto. Não recriar essas estruturas em outro módulo: estender a partir delas.
+Regras de royalties reais devem ser configuradas pela administração; nenhum
+percentual foi presumido. Depois da ativação, o próximo módulo sugerido continua
+sendo o **1: Comercial e Captação**.

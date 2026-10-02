@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Só 2 papéis aqui, de propósito -- esse sistema é enxuto (financeiro do
 // franqueado), não herda a matriz de permissões do CRM interno.
@@ -26,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,10 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (roleError) console.error('Erro ao buscar papel:', roleError);
 
     const role = (roleData?.role as FranquiaRole) || 'franqueado';
-    // Franqueado sem franquia_id é um estado inválido (deveria ter sido
-    // bloqueado na criação da conta) -- derruba a sessão em vez de deixar
-    // essa pessoa logada sem escopo nenhum, o que a RLS trataria como "vê
-    // tudo que não tem franquia_id", não como "não vê nada".
+    // Sem vínculo não há escopo válido para navegar; a RLS também não libera unidade.
     if (role === 'franqueado' && !profile.franquia_id) {
       console.error('Franqueado sem unidade vinculada -- login bloqueado.');
       await supabase.auth.signOut();
@@ -63,13 +61,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
+    let geracao = 0;
+    let ativo = true;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      const atual = ++geracao;
+      if (event === 'SIGNED_OUT') queryClient.clear();
       if (newSession?.user) {
         // setTimeout(0) evita deadlock entre o callback do onAuthStateChange e
         // chamadas supabase feitas dentro dele (recomendação oficial do supabase-js).
         setTimeout(() => {
-          carregarUsuario(newSession.user).then((u) => { setUser(u); setLoading(false); });
+          if (!ativo || atual !== geracao) return;
+          carregarUsuario(newSession.user).then((u) => {
+            if (!ativo || atual !== geracao) return;
+            setUser(u); setLoading(false);
+          }).catch(() => {
+            if (!ativo || atual !== geracao) return;
+            setUser(null); setLoading(false);
+          });
         }, 0);
       } else {
         setUser(null);
@@ -78,12 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (!s) setLoading(false);
+      if (ativo && !s) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => { ativo = false; geracao++; subscription.unsubscribe(); };
+  }, [queryClient]);
 
   const login = async (email: string, senha: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });

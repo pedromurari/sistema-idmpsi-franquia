@@ -16,7 +16,7 @@ export function Header() {
   const navigate = useNavigate();
 
   return (
-    <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+    <header className="min-h-16 py-2 bg-card border-b border-border px-4 lg:px-6 flex flex-wrap gap-2 items-center justify-between sticky top-0 z-40 shadow-sm">
       <div className="flex items-center gap-3">
         <LogoChip className="h-9" />
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground hidden sm:block">Portal do Franqueado</p>

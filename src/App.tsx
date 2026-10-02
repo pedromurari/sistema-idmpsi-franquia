@@ -9,6 +9,7 @@ import Dashboard from '@/pages/Dashboard';
 import DreUnidade from '@/pages/DreUnidade';
 import NotasFiscais from '@/pages/NotasFiscais';
 import Unidades from '@/pages/Unidades';
+import Turmas from '@/pages/Turmas';
 import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/unidades" element={<ProtectedRoute somenteFranqueador><Unidades /></ProtectedRoute>} />
       <Route path="/dre" element={<ProtectedRoute><DreUnidade /></ProtectedRoute>} />
+      <Route path="/turmas" element={<ProtectedRoute><Turmas /></ProtectedRoute>} />
       <Route path="/notas" element={<ProtectedRoute><NotasFiscais /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
