@@ -6,7 +6,11 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Loader2, Eye, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Unidade {
   id: string;
@@ -25,8 +29,14 @@ export default function Unidades() {
   const { setViewAsId } = useViewAs();
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [nome, setNome] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [estado, setEstado] = useState('');
+  const [salvando, setSalvando] = useState(false);
 
-  useEffect(() => {
+  const carregar = () => {
+    setLoading(true);
     supabase
       .from('franquias')
       .select('id, nome, cidade, estado, ativo')
@@ -36,11 +46,31 @@ export default function Unidades() {
         setUnidades((data as Unidade[]) ?? []);
         setLoading(false);
       });
-  }, []);
+  };
+
+  useEffect(carregar, []);
 
   const verComo = (id: string) => {
     setViewAsId(id);
     navigate('/dashboard');
+  };
+
+  const criar = async () => {
+    if (!nome.trim()) return;
+    setSalvando(true);
+    const { error } = await supabase.from('franquias').insert({
+      nome: nome.trim(),
+      cidade: cidade.trim() || null,
+      estado: estado.trim() || null,
+    });
+    setSalvando(false);
+    if (error) { toast.error('Não foi possível criar a unidade: ' + error.message); return; }
+    toast.success('Unidade criada!');
+    setNome('');
+    setCidade('');
+    setEstado('');
+    setDialogAberto(false);
+    carregar();
   };
 
   if (loading) {
@@ -49,7 +79,12 @@ export default function Unidades() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-bold">Unidades</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold">Unidades</h1>
+        <Button size="sm" onClick={() => setDialogAberto(true)} className="gap-1.5">
+          <Plus className="h-4 w-4" /> Nova unidade
+        </Button>
+      </div>
       <Card className="p-0 overflow-hidden">
         <Table>
           <TableHeader>
@@ -62,7 +97,7 @@ export default function Unidades() {
           </TableHeader>
           <TableBody>
             {unidades.length === 0 && (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma unidade cadastrada ainda.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma unidade cadastrada ainda. Clica em "Nova unidade" pra criar a primeira.</TableCell></TableRow>
             )}
             {unidades.map((u) => (
               <TableRow key={u.id}>
@@ -79,6 +114,30 @@ export default function Unidades() {
           </TableBody>
         </Table>
       </Card>
+
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Nova unidade</DialogTitle></DialogHeader>
+          <div className="flex flex-col gap-3 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="un-nome">Nome da unidade</Label>
+              <Input id="un-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: IDM PSI Curitiba" disabled={salvando} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="un-cidade">Cidade</Label>
+              <Input id="un-cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} disabled={salvando} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="un-estado">Estado (UF)</Label>
+              <Input id="un-estado" value={estado} onChange={(e) => setEstado(e.target.value.toUpperCase())} maxLength={2} placeholder="PR" disabled={salvando} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogAberto(false)} disabled={salvando}>Cancelar</Button>
+            <Button onClick={criar} disabled={salvando || !nome.trim()}>{salvando ? 'Salvando...' : 'Criar unidade'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

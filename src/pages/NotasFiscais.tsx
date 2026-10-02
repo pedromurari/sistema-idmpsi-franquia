@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useViewAs } from '@/contexts/ViewAsContext';
+import { RequerUnidade } from '@/components/RequerUnidade';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,7 +80,7 @@ export default function NotasFiscais() {
   };
 
   if (user?.role === 'franqueador' && !franquiaId) {
-    return <Navigate to="/unidades" replace />;
+    return <RequerUnidade />;
   }
 
   if (loading) {

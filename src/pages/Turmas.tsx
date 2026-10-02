@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Navigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { RequerUnidade } from "@/components/RequerUnidade";
 import { Loader2, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,7 +37,7 @@ import {
 export default function Turmas() {
   const { user } = useAuth();
   const { franquiaEfetiva } = useViewAs();
-  if (!franquiaEfetiva) return <Navigate to="/unidades" replace />;
+  if (!franquiaEfetiva) return <RequerUnidade />;
   return (
     <TurmasUnidade
       key={`${user?.id}:${franquiaEfetiva}`}

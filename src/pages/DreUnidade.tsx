@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
 import { Loader2, Pencil, Plus } from "lucide-react";
+import { RequerUnidade } from "@/components/RequerUnidade";
 import { useAuth } from "@/contexts/AuthContext";
 import { useViewAs } from "@/contexts/ViewAsContext";
 import { useFinanceiro, useTurmas } from "@/hooks/useFinanceiro";
@@ -38,7 +38,7 @@ import {
 export default function DreUnidade() {
   const { user } = useAuth();
   const { franquiaEfetiva } = useViewAs();
-  if (!franquiaEfetiva) return <Navigate to="/unidades" replace />;
+  if (!franquiaEfetiva) return <RequerUnidade />;
   // Remonta filtros/formulários na troca de unidade ou sessão: nenhuma edição migra de escopo.
   return (
     <FinanceiroUnidade
