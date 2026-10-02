@@ -50,7 +50,11 @@ export default function Login() {
               className="bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
             />
           </div>
-          <Button type="submit" disabled={enviando} className="mt-2">
+          <Button
+            type="submit"
+            disabled={enviando}
+            className="mt-2 bg-[#f8b400] hover:bg-[#e0a300] text-neutral-900 font-semibold"
+          >
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Entrar'}
           </Button>
         </form>
