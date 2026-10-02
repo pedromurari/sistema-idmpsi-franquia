@@ -7,7 +7,7 @@ DRE e as notas fiscais da própria unidade; o franqueador (ADM geral) vê tudo.
 sistema separado de propósito, porque aqui entra dado fiscal/financeiro de
 terceiros (franqueados), não só dado interno da Onze Digital.
 
-## O que já está pronto (v1 — escopo "só financeiro")
+## O que já está pronto
 
 - Login com Supabase Auth, 2 papéis: `franqueador` e `franqueado`.
 - **DRE por unidade** (`/dre`) — franqueado vê a própria, franqueador escolhe
@@ -21,13 +21,21 @@ terceiros (franqueados), não só dado interno da Onze Digital.
 - **Trilha de auditoria** (`franquia_audit_log`) — toda alteração em DRE e
   notas fiscais fica registrada (quem, quando, antes/depois), só o
   franqueador lê.
+- **Comercial** (`/comercial`) — leads por unidade, etapas do funil, próxima
+  ação manual, propostas de bolsa/desconto, histórico de etapa e meta mensal
+  de matrículas por turma. A etapa "matrícula" não cria aluno ou cobrança.
+- **Expansão de franquias** (`/expansao`) — Kanban e campanhas de venda de
+  novas unidades, exclusivo da administração. É separado do funil de alunos.
 
 ## O que falta pra ir pra produção de verdade
 
 1. **Conferir o schema do projeto Supabase da franquia** (já criado, separado
    do CRM interno) e aplicar as migrations pendentes. A etapa de turmas e
    financeiro requer `0003_turmas_financeiro.sql`, após `0001` e `0002`.
-   Depois, gerar os tipos reais (os atuais são tipos locais baseados nas migrations):
+   As migrations 0003 e 0004 foram verificadas no banco em 02/10/2026;
+   a 0005 (funil comercial) e a 0006 (proteção da solicitação de notas) foram
+   aplicadas no mesmo dia. Os tipos atuais foram
+   gerados desse projeto. Para atualizar:
    ```
    npx supabase gen types typescript --project-id <id> > src/integrations/supabase/types.ts
    ```
@@ -43,8 +51,15 @@ terceiros (franqueados), não só dado interno da Onze Digital.
    `service_role`, nunca algo que o navegador do franqueado chama direto.
 5. **2FA** pros logins de franqueado/franqueador, dado que é acesso a dado
    fiscal de terceiro — o Supabase Auth suporta isso nativamente (MFA).
-6. Deploy: o repositório próprio no GitHub já existe; falta projeto próprio na Vercel
-   (`vercel.json` já configurado pro rewrite de SPA).
+6. Deploy: o projeto próprio na Vercel já existe em
+   `https://sistema.idmpsifranquia.com`. As telas de expansão e comercial foram
+   publicadas em 02/10/2026; ainda é preciso validar o fluxo completo de
+   captura após configurar o Cloudflare Turnstile da landing page.
+
+Revisão do alicerce e prioridades antes de produção:
+[`docs/SEGURANCA_BASE.md`](docs/SEGURANCA_BASE.md).
+Transferência da seção de franquias do CRM interno:
+[`docs/EXPANSAO_FRANQUIAS.md`](docs/EXPANSAO_FRANQUIAS.md).
 
 ## Rodando local
 
@@ -56,8 +71,8 @@ npm run dev
 
 ## Turmas e financeiro por turma — etapa 1 do roadmap
 
-Implementação local disponível; a migration 0003 ainda precisa ser aplicada no
-Supabase da franquia. Instruções, regras e limites em
+Implementação local disponível, com estrutura 0003 verificada e correção de grants
+0004 aplicada no Supabase da franquia em 02/10/2026. Instruções, regras e limites em
 [`docs/ETAPA_1_FINANCEIRO.md`](docs/ETAPA_1_FINANCEIRO.md).
 
 - `/turmas`: cadastro/edição/inativação pelo franqueador, consulta da própria unidade pelo franqueado.
@@ -65,6 +80,11 @@ Supabase da franquia. Instruções, regras e limites em
   caixa realizado pela data da baixa integral e royalties estimados por unidade/mês.
 - RLS + GRANT, vínculo obrigatório à mesma unidade e auditoria automática.
 - Novas tabelas não fazem parte do CRM interno e não usam seu projeto Supabase.
+
+## Comercial e captação — etapa 2 do roadmap
+
+Funil por unidade, histórico de etapas e meta mensal por turma em `/comercial`.
+Regras e limites em [`docs/ETAPA_2_COMERCIAL.md`](docs/ETAPA_2_COMERCIAL.md).
 
 Verificações (Node 22.18+ ou 24):
 

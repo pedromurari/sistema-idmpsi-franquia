@@ -16,6 +16,8 @@ export function Layout({ children }: { children: ReactNode }) {
           { to: '/dashboard', label: 'Dashboard' },
           ...(user.role === 'franqueador' ? [{ to: '/unidades', label: 'Unidades' }] : []),
           { to: '/turmas', label: 'Turmas' },
+          { to: '/comercial', label: 'Comercial' },
+          ...(user.role === 'franqueador' ? [{ to: '/expansao', label: 'IDM PSI Franquias' }] : []),
           { to: '/dre', label: 'Financeiro' },
           { to: '/notas', label: 'Notas' },
         ].map((item) => <NavLink key={item.to} to={item.to} className={({ isActive }) => `px-3 py-2 rounded whitespace-nowrap ${isActive ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground'}`}>{item.label}</NavLink>)}

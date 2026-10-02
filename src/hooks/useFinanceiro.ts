@@ -34,8 +34,8 @@ export function useFinanceiro(franquiaId: string, mes: string) {
     queryKey: ["financeiro", user?.id, user?.role, franquiaId, mes],
     queryFn: async ({ signal }) => {
       const { inicio, fim } = limitesMes(mes);
-      const carregar = (coluna: "competencia" | "data_liquidacao") =>
-        todasPaginas<Lancamento>((de, ate) =>
+      const carregar = async (coluna: "competencia" | "data_liquidacao") => {
+        const linhas = await todasPaginas((de, ate) =>
           supabase
             .from("franquia_dre_lancamentos")
             .select("*")
@@ -47,6 +47,14 @@ export function useFinanceiro(franquiaId: string, mes: string) {
             .range(de, ate)
             .abortSignal(signal),
         );
+        // O gerador do Supabase representa CHECKs textuais como string.
+        return linhas.map((linha): Lancamento => {
+          if (linha.tipo !== "receita" && linha.tipo !== "despesa") {
+            throw new Error("Tipo de lançamento inválido no banco.");
+          }
+          return { ...linha, tipo: linha.tipo };
+        });
+      };
       const [dre, caixa, regra] = await Promise.all([
         carregar("competencia"),
         carregar("data_liquidacao"),

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Building2, Calculator, FileText, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Building2, Calculator, FileText, GraduationCap, ChevronLeft, ChevronRight, UsersRound, TrendingUp } from 'lucide-react';
 
 // Mesmo padrão visual do CRM interno (src/components/crm/Sidebar.tsx): barra
 // branca fixa à esquerda, item ativo em bg-primary/8 + text-primary, botão de
@@ -26,6 +26,8 @@ export function Sidebar() {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     ...(user?.role === 'franqueador' ? [{ to: '/unidades', label: 'Unidades', icon: Building2 }] : []),
     { to: '/turmas', label: 'Turmas', icon: GraduationCap },
+    { to: '/comercial', label: 'Comercial', icon: UsersRound },
+    ...(user?.role === 'franqueador' ? [{ to: '/expansao', label: 'IDM PSI Franquias', icon: TrendingUp }] : []),
     { to: '/dre', label: 'Financeiro', icon: Calculator },
     { to: '/notas', label: 'Notas Fiscais', icon: FileText },
   ];

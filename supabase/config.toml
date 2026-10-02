@@ -1,0 +1,4 @@
+project_id = "sistema-idmpsi-franquia"
+
+[functions.captura-franquia]
+verify_jwt = false

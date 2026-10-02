@@ -74,6 +74,17 @@ async function preparar(
     ],
     franquia_royalties_regras: [],
     franquia_notas_fiscais: [],
+    franquia_leads: [
+      { id: "lead-b", franquia_id: "unidade-b", nome: "Lead de outra unidade", email: "outra@example.test", telefone: null, etapa: "lead", turma_id: "turma-b", score: null, proxima_acao_em: null, proxima_acao: null, bolsa_percentual: 0, desconto_percentual: 0, motivo_perda: null, observacoes: null, origem: null, updated_at: timestamp },
+    ],
+    franquia_lead_etapas: [],
+    franquia_metas_turma: [],
+    franquia_expansao_leads: [],
+    franquia_expansao_campanhas: [],
+    franquia_expansao_responsaveis: [
+      { id: "rodrygo", nome: "Rodrygo", ativo: true },
+      { id: "marcos", nome: "Marcos", ativo: true },
+    ],
   };
   await page.route("https://portal-test.supabase.co/**", async (route) => {
     const request = route.request();
@@ -169,6 +180,79 @@ async function selecionarUnidade(page: Page, nome = "Unidade Alfa") {
     page.getByRole("heading", { name: `Dashboard — ${nome}` }),
   ).toBeVisible();
 }
+
+test("franqueado cadastra lead da própria unidade, avança etapa e exige motivo da perda", async ({ page }) => {
+  const erros: string[] = [];
+  page.on("pageerror", (error) => erros.push(error.message));
+  const dados = await preparar(page, "franqueado");
+  await page.goto("/comercial");
+  await expect(page.getByRole("heading", { name: "Comercial e captação" })).toBeVisible();
+  await expect(page.getByText("Lead de outra unidade")).toHaveCount(0);
+  await page.getByRole("button", { name: "Novo lead" }).click();
+  await page.getByLabel("Nome *").fill("Maria Silva");
+  await page.getByLabel("E-mail").fill("maria@example.test");
+  await page.getByLabel("Turma de interesse").selectOption("turma-a");
+  await page.getByRole("button", { name: "Salvar lead" }).click();
+  await expect(page.getByText("Maria Silva")).toBeVisible();
+  expect(dados.franquia_leads.some((lead) => lead.nome === "Maria Silva" && lead.franquia_id === "unidade-a")).toBe(true);
+  await page.getByRole("button", { name: "Editar Maria Silva" }).click();
+  await page.getByLabel("Etapa").selectOption("perdido");
+  await page.getByRole("button", { name: "Salvar lead" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "motivo da perda" })).toBeVisible();
+  await page.getByLabel("Motivo da perda *").fill("Sem interesse");
+  await page.getByRole("button", { name: "Salvar lead" }).click();
+  await expect(page.getByRole("region", { name: "Perdido" }).getByText("Maria Silva")).toBeVisible();
+  expect(erros).toEqual([]);
+});
+
+test("admin define meta mensal por turma sem criar dados na outra unidade", async ({ page }) => {
+  const dados = await preparar(page);
+  await page.goto("/");
+  await selecionarUnidade(page);
+  await page.getByRole("link", { name: "Comercial" }).first().click();
+  await page.getByRole("button", { name: "Definir meta" }).first().click();
+  await page.getByLabel("Matrículas previstas").fill("12");
+  await page.getByRole("button", { name: "Salvar meta" }).click();
+  await expect(page.getByText("0 / 12")).toBeVisible();
+  expect(dados.franquia_metas_turma).toHaveLength(1);
+  expect(dados.franquia_metas_turma[0].franquia_id).toBe("unidade-a");
+  expect(dados.franquia_metas_turma[0].turma_id).toBe("turma-a");
+});
+
+test("venda de franquias aparece só ao ADM e mantém Kanban e campanha separados do funil de alunos", async ({ page }) => {
+  const dados = await preparar(page);
+  await page.goto("/expansao");
+  await expect(page.getByRole("heading", { name: "IDM PSI Franquias" })).toBeVisible();
+  await page.getByRole("button", { name: "Novo lead" }).click();
+  await page.getByLabel("Nome *").fill("Interessado Franquia");
+  await page.getByLabel("WhatsApp").fill("11999999999");
+  await page.getByLabel("Responsável").selectOption("rodrygo");
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Novo" }).getByText("Interessado Franquia")).toBeVisible();
+  expect(dados.franquia_expansao_leads).toHaveLength(1);
+  expect(dados.franquia_leads).toHaveLength(1);
+  await page.getByRole("button", { name: "Campanha", exact: true }).click();
+  await page.getByRole("button", { name: "Registrar métricas" }).click();
+  await page.getByLabel("Gasto (R$)").fill("150");
+  await page.getByLabel("Leads", { exact: true }).fill("3");
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(page.getByText("R$ 50,00").first()).toBeVisible();
+  expect(dados.franquia_expansao_campanhas).toHaveLength(1);
+});
+
+test("franqueado não vê nem abre a área de venda de franquias", async ({ page }) => {
+  await preparar(page, "franqueado");
+  await page.goto("/expansao");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("link", { name: "IDM PSI Franquias" })).toHaveCount(0);
+});
+
+test("página pública de interesse não aceita captura sem verificação configurada", async ({ page }) => {
+  await page.goto("/quero-ser-franqueado");
+  await expect(page.getByRole("heading", { name: /Quer conhecer a oportunidade/ })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("temporariamente indisponível");
+  await expect(page.getByRole("button", { name: "Quero saber mais" })).toHaveCount(0);
+});
 
 test("admin cria turma, lança receita, baixa no caixa e configura royalties sem afetar competência anterior", async ({
   page,

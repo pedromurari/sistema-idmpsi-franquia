@@ -10,6 +10,9 @@ import DreUnidade from '@/pages/DreUnidade';
 import NotasFiscais from '@/pages/NotasFiscais';
 import Unidades from '@/pages/Unidades';
 import Turmas from '@/pages/Turmas';
+import Comercial from '@/pages/Comercial';
+import ExpansaoFranquias from '@/pages/ExpansaoFranquias';
+import CapturaFranquia from '@/pages/CapturaFranquia';
 import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -31,10 +34,13 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={loading ? null : user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/quero-ser-franqueado" element={<CapturaFranquia />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/unidades" element={<ProtectedRoute somenteFranqueador><Unidades /></ProtectedRoute>} />
       <Route path="/dre" element={<ProtectedRoute><DreUnidade /></ProtectedRoute>} />
       <Route path="/turmas" element={<ProtectedRoute><Turmas /></ProtectedRoute>} />
+      <Route path="/comercial" element={<ProtectedRoute><Comercial /></ProtectedRoute>} />
+      <Route path="/expansao" element={<ProtectedRoute somenteFranqueador><ExpansaoFranquias /></ProtectedRoute>} />
       <Route path="/notas" element={<ProtectedRoute><NotasFiscais /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

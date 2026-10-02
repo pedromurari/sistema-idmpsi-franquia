@@ -1,16 +1,26 @@
 # Etapa 1 — turmas, caixa realizado e royalties
 
-## Ativação no Supabase da franquia
+## Estado verificado em 02/10/2026
+
+Projeto `bremvrsjmnsvtpgcsgtj` (`sistema-idmpsi-franquia`): a migration 0003
+já estava aplicada ao concluir a inspeção; não foi reaplicada. O Codex aplicou
+0004 para remover privilégios administrativos dos papéis da API e gerou os tipos
+do schema remoto. Verificação somente leitura: `scripts/verificar_financeiro.sql`.
+Homologação com logins reais e publicação na Vercel continuam pendentes.
+
+## Ativação em outro ambiente / referência
 
 1. Confirmar que o projeto é **sistema-idmpsi-franquia**, organização **IDM PSI Franquia**.
 2. Conferir que as migrations 0001 e 0002 já foram executadas. Não reaplicar 0001 em um schema existente.
 3. Executar **todo** o arquivo `supabase/migrations/0003_turmas_financeiro.sql` no SQL Editor.
    Ele usa transação; se falhar, corrigir a causa antes de tentar novamente. Não é uma migration para reaplicar após sucesso.
-4. Gerar os tipos do projeto com `supabase gen types typescript` e substituir os tipos locais de `src/integrations/supabase/types.ts`.
+4. Aplicar `0004_restringir_grants.sql` para garantir grants mínimos. Gerar os tipos do projeto com `supabase gen types typescript` e substituir os tipos locais de `src/integrations/supabase/types.ts`.
 5. Rodar `npm run typecheck`, `npm run lint`, `npm test` e `npm run build`.
 6. Validar com um franqueador e dois franqueados de unidades distintas antes de publicar.
 
-Esta entrega não aplicou SQL no banco remoto nem publicou na Vercel.
+Na validação remota, a CLI autenticada passou a ter acesso à organização. A 0004
+foi aplicada pela Management API via `supabase db query --linked`. A 0003 foi
+encontrada aplicada durante a conferência. Não houve publicação na Vercel.
 
 ## Como usar
 
@@ -59,6 +69,9 @@ Só configurar para operação após confirmar as condições contratuais aplic�
 ## Segurança e integridade
 
 - Novas tabelas possuem RLS e GRANT explícitos; franqueados leem apenas a própria unidade.
+- A 0004 remove privilégios administrativos (incluindo TRUNCATE, que não respeita RLS)
+  dos papéis da API e restabelece apenas os grants necessários. Novas tabelas criadas
+  por postgres continuam exigindo grants explícitos.
 - FK composta bloqueia turma de outra unidade mesmo em escrita administrativa.
 - Contas inativas deixam de acessar dados protegidos pelos helpers, mesmo com JWT válido.
 - Migrations anteriores são preservadas; registros antigos ganham turma/baixa nulas.

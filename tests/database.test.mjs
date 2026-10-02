@@ -27,6 +27,8 @@ before(async () => {
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to authenticated, anon;
     grant execute on function auth.uid() to authenticated, anon;`);
+  await db.exec(`alter default privileges for role postgres in schema public
+    grant truncate, references, trigger on tables to authenticated, anon;`);
   for (const file of ["0001_init_franquias.sql", "0002_grants.sql"])
     await db.exec(
       await readFile(
@@ -50,9 +52,56 @@ before(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../supabase/migrations/0004_restringir_grants.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    await readFile(
+      new URL("../supabase/migrations/0005_funil_comercial.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    await readFile(
+      new URL("../supabase/migrations/0006_proteger_solicitacao_nf.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    await readFile(
+      new URL("../supabase/migrations/0007_expansao_franquias.sql", import.meta.url),
+      "utf8",
+    ),
+  );
 });
 after(async () => {
   await db.close();
+});
+
+test("papéis da API não podem truncar nem administrar tabelas; novas tabelas exigem grant explícito", async () => {
+  const { rows } = await db.query(`select c.relname from pg_class c
+    join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r'
+    and (has_table_privilege('authenticated',c.oid,'TRUNCATE')
+      or has_table_privilege('authenticated',c.oid,'TRIGGER')
+      or has_table_privilege('authenticated',c.oid,'REFERENCES')
+      or has_table_privilege('anon',c.oid,'SELECT'))`);
+  assert.deepEqual(rows, []);
+  await assert.rejects(
+    como(admin, "truncate franquia_audit_log"),
+    /permission denied/,
+  );
+  await db.exec("create table public.teste_grants_futuros(id integer)");
+  const futuro = await db.query(
+    "select has_table_privilege('authenticated','public.teste_grants_futuros','TRUNCATE') as truncar",
+  );
+  assert.equal(futuro.rows[0].truncar, false);
+  await db.exec("drop table public.teste_grants_futuros");
 });
 
 test("migration preserva registros antigos sem inventar turma, caixa ou royalties", async () => {
@@ -333,4 +382,98 @@ test("controle de concorrência detecta edição desatualizada e exclusão mant�
   assert.equal(rows[0].dados_antigos.descricao, "Correção");
   assert.equal(rows[0].dados_novos, null);
   assert.equal(rows[0].ator, admin);
+});
+
+test("funil isola leads e histórico por unidade, impede troca de escopo e registra etapas", async () => {
+  const lead = "40000000-0000-0000-0000-000000000001";
+  await como(alunoA,
+    "insert into franquia_leads(id,franquia_id,turma_id,nome,email) values ($1,$2,$3,$4,$5)",
+    [lead, unidadeA, turmaA, "Maria", "maria@example.test"]);
+  assert.equal((await como(alunoA, "select * from franquia_leads")).rows.length, 1);
+  assert.equal((await como(alunoB, "select * from franquia_leads")).rows.length, 0);
+  assert.equal((await como(alunoA, "select * from franquia_lead_etapas")).rows.length, 1);
+  assert.equal((await como(alunoB, "select * from franquia_lead_etapas")).rows.length, 0);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_leads(franquia_id,nome,telefone) values ($1,$2,$3)",
+    [unidadeB, "Intruso", "11999999999"]), /row-level security/);
+  await assert.rejects(como(alunoA,
+    "update franquia_leads set franquia_id=$1 where id=$2", [unidadeB, lead]), /imutáveis/);
+  await assert.rejects(como(admin,
+    "update franquia_leads set turma_id=$1 where id=$2", [turmaB, lead]), /foreign key/);
+  await assert.rejects(como(alunoA,
+    "update franquia_leads set etapa='perdido' where id=$1", [lead]), /check constraint/);
+  await como(alunoA,
+    "update franquia_leads set etapa='matricula' where id=$1", [lead]);
+  const etapas = (await como(admin,
+    "select etapa_anterior,etapa_nova,ator,turma_id from franquia_lead_etapas where lead_id=$1 order by id", [lead])).rows;
+  assert.deepEqual(etapas.map((e) => e.etapa_nova), ["lead", "matricula"]);
+  assert.equal(etapas[1].ator, alunoA);
+  assert.equal(etapas[1].turma_id, turmaA);
+  await assert.rejects(como(alunoA,
+    "delete from franquia_lead_etapas where lead_id=$1", [lead]), /permission denied/);
+});
+
+test("meta mensal é exclusiva do admin, auditada e vinculada à turma correta", async () => {
+  await assert.rejects(como(alunoA,
+    "insert into franquia_metas_turma(franquia_id,turma_id,competencia,meta_matriculas) values ($1,$2,'2026-10-01',10)",
+    [unidadeA, turmaA]), /row-level security/);
+  await assert.rejects(como(admin,
+    "insert into franquia_metas_turma(franquia_id,turma_id,competencia,meta_matriculas) values ($1,$2,'2026-10-01',10)",
+    [unidadeA, turmaB]), /foreign key/);
+  await como(admin,
+    "insert into franquia_metas_turma(franquia_id,turma_id,competencia,meta_matriculas) values ($1,$2,'2026-10-01',10)",
+    [unidadeA, turmaA]);
+  assert.equal((await como(alunoA, "select * from franquia_metas_turma")).rows.length, 1);
+  assert.equal((await como(alunoB, "select * from franquia_metas_turma")).rows.length, 0);
+  assert.equal((await como(admin,
+    "select * from franquia_audit_log where tabela='franquia_metas_turma'")).rows.length, 1);
+});
+
+test("franqueado não consegue forjar emissão, PDF ou autor de nota fiscal", async () => {
+  await assert.rejects(como(alunoA,
+    "insert into franquia_notas_fiscais(franquia_id,competencia,valor,status) values ($1,'2026-10-01',100,'emitida')",
+    [unidadeA]), /só pode solicitar nota pendente/);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_notas_fiscais(franquia_id,competencia,valor,solicitado_por) values ($1,'2026-10-01',100,$2)",
+    [unidadeA, alunoB]), /só pode solicitar nota pendente/);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_notas_fiscais(franquia_id,competencia,valor,link_pdf) values ($1,'2026-10-01',100,'https://exemplo.test/falso.pdf')",
+    [unidadeA]), /só pode solicitar nota pendente/);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_notas_fiscais(franquia_id,competencia,valor) values ($1,'2026-10-01',100)",
+    [unidadeB]), /row-level security/);
+  const criada = await como(alunoA,
+    "insert into franquia_notas_fiscais(franquia_id,competencia,valor) values ($1,'2026-10-01',100) returning id,solicitado_por,status",
+    [unidadeA]);
+  assert.equal(criada.rows[0].solicitado_por, alunoA);
+  assert.equal(criada.rows[0].status, "pendente");
+  await assert.rejects(como(admin,
+    "update franquia_notas_fiscais set link_pdf='javascript:alert(1)' where id=$1",
+    [criada.rows[0].id]), /check constraint/);
+  await assert.rejects(como(admin,
+    "update franquia_notas_fiscais set franquia_id=$1 where id=$2",
+    [unidadeB, criada.rows[0].id]), /imutáveis/);
+  assert.equal((await como(admin,
+    "select * from franquia_audit_log where tabela='franquia_notas_fiscais' and registro_id=$1",
+    [criada.rows[0].id])).rows.length, 1);
+});
+
+test("captação de compradores de franquia fica invisível a franqueados e auditada", async () => {
+  const tabelas = ["franquia_expansao_leads", "franquia_expansao_campanhas", "franquia_expansao_responsaveis"];
+  for (const tabela of tabelas) {
+    assert.equal((await como(alunoA, `select * from ${tabela}`)).rows.length, 0);
+    assert.equal((await como(alunoB, `select * from ${tabela}`)).rows.length, 0);
+  }
+  await assert.rejects(como(alunoA,
+    "insert into franquia_expansao_leads(nome,email) values ('Interessado','interessado@example.test')"), /row-level security/);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_expansao_campanhas(gasto) values (100)"), /row-level security/);
+  const lead = await como(admin,
+    "insert into franquia_expansao_leads(nome,email) values ('Interessado','interessado@example.test') returning id");
+  await como(admin, "update franquia_expansao_leads set fase='contatado' where id=$1", [lead.rows[0].id]);
+  await como(admin, "insert into franquia_expansao_campanhas(gasto,cliques,impressoes,leads_count) values (100,50,1000,4)");
+  assert.equal((await como(admin, "select * from franquia_expansao_leads")).rows.length, 1);
+  assert.equal((await como(admin, "select cpl,ctr from franquia_expansao_campanhas")).rows[0].cpl, "25.00");
+  assert.equal((await como(admin, "select count(*)::int as n from franquia_audit_log where tabela='franquia_expansao_leads'")).rows[0].n, 2);
+  await assert.rejects(como(admin, "delete from franquia_expansao_leads"), /permission denied/);
 });

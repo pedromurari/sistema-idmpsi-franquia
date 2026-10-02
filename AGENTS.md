@@ -11,12 +11,18 @@ Portal do Franqueado da **Franquia IDM PSI** — franqueado loga e vê o DRE e a
 notas fiscais da própria unidade; o franqueador (ADM geral) vê todas as
 unidades. Detalhes de produto/escopo: ver `README.md`.
 
+**Dois funis distintos:** `/comercial` e `franquia_leads` cuidam de alunos de
+cada unidade. `/expansao` e `franquia_expansao_*` cuidam da venda de novas
+franquias e são exclusivos do ADM. Nunca juntar esses dados nem copiar os IDs
+de usuários Auth do CRM interno para este projeto. Ver
+`docs/EXPANSAO_FRANQUIAS.md`.
+
 ## Não é o mesmo projeto do CRM interno
 
 Existe um outro repositório, **local, nesta mesma máquina**, em
 `E:\onze-digital-main` — é o CRM interno da Onze Digital (gestão de leads,
 matrícula, financeiro da empresa). São dois produtos, dois repositórios, dois
-projetos Supabase e (quando sair) dois projetos Vercel **separados**.
+projetos Supabase e dois projetos Vercel **separados**.
 
 **Mas use aquele repositório como referência o tempo todo.** Muita coisa boa
 já foi resolvida lá e não precisa ser reinventada aqui:
@@ -68,9 +74,14 @@ igual o CRM interno.
 - Supabase: organização **"IDM PSI Franquia"** (plano Free), projeto
   `sistema-idmpsi-franquia`, região `sa-east-1`. Esta organização **não**
   está conectada ao conector/MCP do Supabase que o Claude usa no CRM interno
-  -- migrations novas precisam ser coladas manualmente no SQL Editor do
-  dashboard até alguém conectar essa organização.
-- Vercel: ainda não criado.
+  -- o MCP continua separado, mas a CLI autenticada já tem acesso à organização
+  (verificado em 02/10/2026). Projeto ref `bremvrsjmnsvtpgcsgtj`; conferir
+  esse vínculo antes de usar `supabase db query --linked`. Também é possível
+  usar o SQL Editor. Não usar `db push` sem reconciliar o histórico das
+  migrations executadas manualmente.
+- Vercel: projeto `sistema-idmpsi-franquia` criado, com domínio de produção
+  `https://sistema.idmpsifranquia.com`. Conferir o commit/deploy atual antes
+  de presumir que alterações locais já estejam publicadas.
 
 ## Rodando local
 

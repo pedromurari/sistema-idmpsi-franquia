@@ -14,6 +14,7 @@ dist-ssr
 .verification/
 test-results/
 playwright-report/
+supabase/.temp/
 *.local
 
 # Editor directories and files
@@ -21,3 +22,6 @@ playwright-report/
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+.vercel
+.env*

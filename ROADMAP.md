@@ -12,16 +12,22 @@ Convenção de status: 🟢 pronto · 🟡 parcial/em andamento · ⚪ não inic
 
 ---
 
-## 1. Comercial e Captação — Funil do Aluno ⚪
+## 1. Comercial e Captação — Funil do Aluno 🟡
 
 Funil Lead → Atendimento → Entrevista/Aula Experimental → Matrícula → Aluno →
 Formado → Pós-graduação, com origem do lead, score, automação de follow-up,
 gestão de bolsas/descontos, meta vs realizado por turma.
 
+**Implementado em 02/10/2026:** `/comercial` com leads isolados por unidade,
+etapas e histórico, origem, score manual, próxima ação, proposta de bolsa e
+desconto e meta mensal por turma. Migração 0005 aplicada no Supabase da
+franquia, com RLS e GRANT. Falta automação de follow-up, score automático,
+cadastro real de aluno/matrícula e integração com campanhas.
+
 **Referência no CRM interno:** `TimeComercial.tsx` (funil + campanhas +
 canal de aquisição) e `Pipeline.tsx` já resolvem um funil parecido lá --
-é o melhor ponto de partida, adaptado pra multi-tenant (cada franqueado só
-vendo o próprio funil). **Não existe hoje neste projeto.**
+é o melhor ponto de partida para as partes ainda pendentes, adaptado pra
+multi-tenant (cada franqueado só vendo o próprio funil).
 
 **Complexidade:** alta (é o módulo mais parecido com todo o Time Comercial
 do CRM interno, só que multi-tenant).
