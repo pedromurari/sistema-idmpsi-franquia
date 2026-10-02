@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useViewAs } from '@/contexts/ViewAsContext';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, Eye } from 'lucide-react';
 
 interface Unidade {
   id: string;
@@ -19,6 +21,8 @@ interface Unidade {
 // é franqueador ou pra ver a própria, e aqui a query não passa franquia_id
 // nenhum, então só retorna linha se a policy liberar).
 export default function Unidades() {
+  const navigate = useNavigate();
+  const { setViewAsId } = useViewAs();
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +38,11 @@ export default function Unidades() {
       });
   }, []);
 
+  const verComo = (id: string) => {
+    setViewAsId(id);
+    navigate('/dashboard');
+  };
+
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -48,21 +57,23 @@ export default function Unidades() {
               <TableHead>Unidade</TableHead>
               <TableHead>Cidade</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>DRE</TableHead>
-              <TableHead>Notas</TableHead>
+              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {unidades.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma unidade cadastrada ainda.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma unidade cadastrada ainda.</TableCell></TableRow>
             )}
             {unidades.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.nome}</TableCell>
                 <TableCell>{[u.cidade, u.estado].filter(Boolean).join(' - ') || '—'}</TableCell>
                 <TableCell><Badge variant={u.ativo ? 'default' : 'outline'}>{u.ativo ? 'Ativa' : 'Inativa'}</Badge></TableCell>
-                <TableCell><Link to={`/dre?franquia=${u.id}`} className="text-primary underline text-sm">Ver DRE</Link></TableCell>
-                <TableCell><Link to={`/notas?franquia=${u.id}`} className="text-primary underline text-sm">Ver notas</Link></TableCell>
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" onClick={() => verComo(u.id)} className="gap-1.5">
+                    <Eye className="h-3.5 w-3.5" /> Ver como
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

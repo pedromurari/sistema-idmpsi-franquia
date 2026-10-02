@@ -1,0 +1,3 @@
+# Normaliza fim de linha -- sem isso, todo commit no Windows reclama de
+# LF virando CRLF (os avisos que apareceram em todo push até agora).
+* text=auto eol=lf

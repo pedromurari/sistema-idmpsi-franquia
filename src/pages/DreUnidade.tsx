@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useViewAs } from '@/contexts/ViewAsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
@@ -21,31 +22,29 @@ const formatMes = (competencia: string) =>
 
 export default function DreUnidade() {
   const { user } = useAuth();
-  const [params] = useSearchParams();
-  // franqueador pode olhar o DRE de uma unidade específica via ?franquia=<id>;
-  // franqueado sempre vê a própria (ignora o param, mesmo que alguém tente forçar
-  // a URL -- a RLS também bloqueia isso no banco, isso aqui é só UX).
-  const franquiaId = user?.role === 'franqueado' ? user.franquiaId : params.get('franquia');
+  // franqueado sempre vê a própria unidade; franqueador vê a que escolheu no
+  // seletor "ver como" do header (useViewAs) -- nunca pela URL.
+  const { franquiaEfetiva } = useViewAs();
 
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!franquiaId) { setLoading(false); return; }
+    if (!franquiaEfetiva) { setLoading(false); return; }
     setLoading(true);
     supabase
       .from('franquia_dre_lancamentos')
       .select('id, competencia, tipo, categoria, descricao, valor')
-      .eq('franquia_id', franquiaId)
+      .eq('franquia_id', franquiaEfetiva)
       .order('competencia', { ascending: false })
       .then(({ data, error }) => {
         if (error) console.error('Erro ao carregar DRE:', error);
         setLancamentos((data as Lancamento[]) ?? []);
         setLoading(false);
       });
-  }, [franquiaId]);
+  }, [franquiaEfetiva]);
 
-  if (user?.role === 'franqueador' && !franquiaId) {
+  if (user?.role === 'franqueador' && !franquiaEfetiva) {
     return <Navigate to="/unidades" replace />;
   }
 

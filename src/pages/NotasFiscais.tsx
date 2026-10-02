@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useViewAs } from '@/contexts/ViewAsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,8 +33,9 @@ const STATUS_BADGE: Record<NotaFiscal['status'], { label: string; className: str
 
 export default function NotasFiscais() {
   const { user } = useAuth();
-  const [params] = useSearchParams();
-  const franquiaId = user?.role === 'franqueado' ? user.franquiaId : params.get('franquia');
+  // franqueado sempre vê a própria unidade; franqueador vê a que escolheu no
+  // seletor "ver como" do header (useViewAs) -- nunca pela URL.
+  const { franquiaEfetiva: franquiaId } = useViewAs();
 
   const [notas, setNotas] = useState<NotaFiscal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,7 @@ export default function NotasFiscais() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Notas Fiscais</h1>
-        {user?.role === 'franqueado' && (
+        {franquiaId && (
           <Button size="sm" onClick={() => setDialogAberto(true)} className="gap-1.5">
             <Plus className="h-4 w-4" /> Solicitar nota
           </Button>
