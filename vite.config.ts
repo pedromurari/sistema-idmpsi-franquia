@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 
 // Sistema do Franqueador (IDM PSI) — portal financeiro do franqueado + visão
@@ -14,9 +14,9 @@ export default defineConfig(({ mode }) => ({
       "Content-Security-Policy":
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline'; " +
-        "style-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
         "img-src 'self' data: blob: https:; " +
-        "font-src 'self' data:; " +
+        "font-src 'self' data: https://fonts.gstatic.com; " +
         "connect-src 'self' https://*.supabase.co wss://*.supabase.co; " +
         "frame-ancestors 'none'; " +
         "base-uri 'self'; " +
