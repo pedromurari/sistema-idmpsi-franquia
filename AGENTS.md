@@ -82,4 +82,10 @@ npm run dev             # porta 8090 (o CRM interno usa 8080 -- não conflita)
 
 ## Pendências em aberto
 
-Ver a seção "O que falta pra ir pra produção de verdade" em `README.md`.
+Ver a seção "O que falta pra ir pra produção de verdade" em `README.md` pro
+que falta pra v1 ir pra produção, e **`ROADMAP.md`** pros 8 módulos maiores
+que o sócio/Rodrigo pediram (funil comercial, jornada do aluno, acadêmico,
+professores, operacional, relatórios, integrações). O roadmap documenta pra
+cada módulo: o que já existe aqui, o que dá pra reaproveitar do CRM interno,
+e a ordem sugerida -- leia antes de começar um módulo novo, pra não
+duplicar trabalho entre sessões/agentes diferentes.
