@@ -29,26 +29,21 @@ Em 02/10/2026, seu HTML público ainda enviava `POST` com chave `anon` ao
 `franquia_leads` do CRM antigo e exibia sucesso inclusive após falha HTTP ou
 de rede. A policy da tabela antiga não autoriza INSERT anônimo. O código fonte
 da landing foi corrigido para enviar à Edge Function do banco novo, exigir
-consentimento e Turnstile, e só confirmar após resposta HTTP de sucesso.
-Ele foi publicado em 02/10/2026 em modo seguro: sem as chaves Turnstile,
-o formulário fica indisponível e o visitante encontra o link de WhatsApp.
+consentimento e só confirmar após resposta HTTP de sucesso.
 O Kanban ADM também foi publicado em `sistema.idmpsifranquia.com`.
 
 O código da nova página `/quero-ser-franqueado` e da Edge Function
-`captura-franquia` está preparado. A função exige validação **no servidor**
-do Cloudflare Turnstile antes de gravar um lead com `service_role`. A tabela
-não dá permissão de escrita pública. A captura fica indisponível até configurar:
-
-- no Vite/Vercel: `VITE_TURNSTILE_SITE_KEY` (chave pública);
-- nos segredos da Edge Function: `CAPTURA_TURNSTILE_SECRET`,
-  `CAPTURA_ALLOWED_ORIGINS` e `CAPTURA_ALLOWED_HOSTNAMES`;
-- no Turnstile: domínios públicos da landing page e do portal.
+`captura-franquia` valida os campos e o consentimento no servidor, rejeita o
+campo invisível para bots e limita envios por IP (20/hora) e contato (3/dia)
+com contadores atômicos no Supabase. A migration 0008 habilita RLS e libera
+a função de limite apenas para `service_role`. A Edge Function exige os segredos
+`CAPTURA_ALLOWED_ORIGINS` e `CAPTURA_RATE_SECRET`. A tabela de leads não dá
+permissão de escrita pública. Esse limite reduz abuso, mas não garante
+eliminação de spam; acompanhar o volume e ajustar se necessário.
 
 `SUPABASE_SERVICE_ROLE_KEY` é fornecida pelo runtime da Edge Function e
 **nunca** entra em variáveis `VITE_` ou no site estático. Na landing page,
-`TURNSTILE_SITE_KEY` é uma variável Vercel lida pela rota pública
-`/api/captura-config`; a chave secreta fica apenas na Edge Function. O CRM
-antigo também possui
+O CRM antigo também possui
 `lista_espera_cidades` (2 registros em 02/10/2026), documentada como lista de
 espera pública de cidades/turmas. Não confundir esses interessados com leads de
 compra de franquia sem confirmar a finalidade da página externa.

@@ -5,7 +5,6 @@ export interface CapturaValida {
   cidade: string | null;
   estado: string | null;
   motivacao: string | null;
-  token: string;
 }
 
 export function validarCaptura(valor: unknown): CapturaValida {
@@ -25,7 +24,6 @@ export function validarCaptura(valor: unknown): CapturaValida {
   const cidade = texto("cidade", 120);
   const estado = texto("estado", 80);
   const motivacao = texto("motivacao", 80);
-  const token = texto("token", 2048);
   if (nome.length < 2 || (!whatsapp && !email)) throw new Error("Informe nome e WhatsApp ou e-mail.");
   if (whatsapp && !/^\d{8,15}$/.test(whatsapp.replace(/\D/g, ""))) throw new Error("WhatsApp inválido.");
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("E-mail inválido.");
@@ -35,6 +33,5 @@ export function validarCaptura(valor: unknown): CapturaValida {
     "Quero expandir meu negócio atual", "Tenho formação na área e quero escalar",
     "Outro motivo",
   ].includes(motivacao)) throw new Error("Motivo de interesse inválido.");
-  if (!token) throw new Error("Confirme a verificação de segurança.");
-  return { nome, whatsapp: whatsapp || null, email: email || null, cidade: cidade || null, estado: estado || null, motivacao: motivacao || null, token };
+  return { nome, whatsapp: whatsapp || null, email: email || null, cidade: cidade || null, estado: estado || null, motivacao: motivacao || null };
 }

@@ -53,8 +53,8 @@ terceiros (franqueados), não só dado interno da Onze Digital.
    fiscal de terceiro — o Supabase Auth suporta isso nativamente (MFA).
 6. Deploy: o projeto próprio na Vercel já existe em
    `https://sistema.idmpsifranquia.com`. As telas de expansão e comercial foram
-   publicadas em 02/10/2026; ainda é preciso validar o fluxo completo de
-   captura após configurar o Cloudflare Turnstile da landing page.
+   publicadas em 02/10/2026; a captura pública usa uma Edge Function no
+   Supabase, com validação e limite de envios por IP e contato.
 
 Revisão do alicerce e prioridades antes de produção:
 [`docs/SEGURANCA_BASE.md`](docs/SEGURANCA_BASE.md).

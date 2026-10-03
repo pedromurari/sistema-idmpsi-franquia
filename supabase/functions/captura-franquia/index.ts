@@ -2,8 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { validarCaptura } from "./validacao.ts";
 
 const origens = (Deno.env.get("CAPTURA_ALLOWED_ORIGINS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-const hosts = (Deno.env.get("CAPTURA_ALLOWED_HOSTNAMES") ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-const turnstileSecret = Deno.env.get("CAPTURA_TURNSTILE_SECRET");
+const rateSecret = Deno.env.get("CAPTURA_RATE_SECRET");
 const dbSecret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
 
@@ -17,7 +16,7 @@ Deno.serve(async (req) => {
   if (!permitido) return resposta(403, "Origem não permitida.");
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cabecalhos });
   if (req.method !== "POST") return resposta(405, "Método não permitido.");
-  if (!turnstileSecret || !dbSecret || !supabaseUrl || !hosts.length) return resposta(503, "Captação temporariamente indisponível.");
+  if (!rateSecret || !dbSecret || !supabaseUrl) return resposta(503, "Captação temporariamente indisponível.");
   if (!req.headers.get("content-type")?.startsWith("application/json")) return resposta(415, "Envie JSON.");
   let entrada: ReturnType<typeof validarCaptura>;
   try {
@@ -28,21 +27,22 @@ Deno.serve(async (req) => {
   } catch (erro) {
     return resposta(400, erro instanceof Error ? erro.message : "Dados inválidos.");
   }
-  let verificado: { success?: boolean; hostname?: string };
-  try {
-    const validacao = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ secret: turnstileSecret, response: entrada.token }),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!validacao.ok) return resposta(503, "Verificação indisponível. Tente mais tarde.");
-    verificado = await validacao.json();
-  } catch {
-    return resposta(503, "Verificação indisponível. Tente mais tarde.");
-  }
-  if (!verificado.success || !hosts.includes((verificado.hostname ?? "").toLowerCase()))
-    return resposta(400, "Verificação inválida. Atualize a página e tente novamente.");
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  if (!ip || ip.length > 64) return resposta(503, "Captação temporariamente indisponível.");
+  const contato = entrada.email || entrada.whatsapp!.replace(/\D/g, "");
+  const chave = await crypto.subtle.importKey("raw", new TextEncoder().encode(rateSecret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const hash = async (valor: string) => Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", chave,
+    new TextEncoder().encode(valor)))).map((byte) => byte.toString(16).padStart(2, "0")).join("");
   const admin = createClient(supabaseUrl, dbSecret, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data: admitido, error: limiteErro } = await admin.rpc("franquia_captura_admitir", {
+    p_ip_hash: await hash(`ip:${ip}`), p_contato_hash: await hash(`contato:${contato}`),
+  });
+  if (limiteErro) {
+    console.error("Falha ao validar limite da captura", limiteErro.code);
+    return resposta(503, "Não foi possível enviar agora. Tente mais tarde.");
+  }
+  if (!admitido) return resposta(429, "Muitas tentativas. Aguarde e tente novamente.");
   const { error } = await admin.from("franquia_expansao_leads").insert({
     nome: entrada.nome, whatsapp: entrada.whatsapp, email: entrada.email,
     cidade: entrada.cidade, estado: entrada.estado, origem: "captura",

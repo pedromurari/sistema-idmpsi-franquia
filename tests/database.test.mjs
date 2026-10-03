@@ -23,6 +23,7 @@ async function como(id, query, params = []) {
 }
 before(async () => {
   await db.exec(`create role authenticated nologin; create role anon nologin;
+    create role service_role nologin bypassrls;
     create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to authenticated, anon;
@@ -76,6 +77,12 @@ before(async () => {
   await db.exec(
     await readFile(
       new URL("../supabase/migrations/0007_expansao_franquias.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    await readFile(
+      new URL("../supabase/migrations/0008_captura_rate_limit.sql", import.meta.url),
       "utf8",
     ),
   );
@@ -476,4 +483,24 @@ test("captação de compradores de franquia fica invisível a franqueados e audi
   assert.equal((await como(admin, "select cpl,ctr from franquia_expansao_campanhas")).rows[0].cpl, "25.00");
   assert.equal((await como(admin, "select count(*)::int as n from franquia_audit_log where tabela='franquia_expansao_leads'")).rows[0].n, 2);
   await assert.rejects(como(admin, "delete from franquia_expansao_leads"), /permission denied/);
+});
+
+test("limite de captura é atômico e inacessível a visitantes e franqueados", async () => {
+  await assert.rejects(como(alunoA, "select * from franquia_captura_rate_limits"), /permission denied/);
+  await assert.rejects(como(alunoA,
+    "select franquia_captura_admitir($1,$2)", ["a".repeat(64), "b".repeat(64)]), /permission denied/);
+  await db.exec("set role service_role");
+  try {
+    for (let n = 0; n < 3; n++) {
+      const { rows } = await db.query("select franquia_captura_admitir($1,$2) as admitido",
+        ["a".repeat(64), "b".repeat(64)]);
+      assert.equal(rows[0].admitido, true);
+    }
+    assert.equal((await db.query("select franquia_captura_admitir($1,$2) as admitido",
+      ["a".repeat(64), "b".repeat(64)])).rows[0].admitido, false);
+    assert.equal((await db.query("select franquia_captura_admitir($1,$2) as admitido",
+      ["a".repeat(64), "c".repeat(64)])).rows[0].admitido, true);
+  } finally {
+    await db.exec("reset role");
+  }
 });
