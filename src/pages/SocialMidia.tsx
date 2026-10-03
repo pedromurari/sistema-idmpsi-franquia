@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErroCarregamento } from "@/components/financeiro/Shared";
+import { RequerUnidade } from "@/components/RequerUnidade";
 
 type Post = Database["public"]["Tables"]["franquia_social_posts"]["Row"];
 type Escopo = "franqueadora" | "unidade";
@@ -26,11 +27,10 @@ const classeCampo = "w-full rounded-md border border-input bg-background px-3 py
 
 export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const { user } = useAuth();
-  const { unidades, viewAsId } = useViewAs();
+  const { franquiaEfetiva } = useViewAs();
   const cache = useQueryClient();
   const admin = user?.role === "franqueador";
-  const [unidadeSelecionada, setUnidadeSelecionada] = useState<string | null>(null);
-  const unidadeId = escopo === "unidade" ? (admin ? unidadeSelecionada || viewAsId || unidades[0]?.id : user?.franquiaId) : null;
+  const unidadeId = escopo === "unidade" ? franquiaEfetiva : null;
   const [visualizacao, setVisualizacao] = useState<"grade" | "calendario" | "kanban">("grade");
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("todos");
@@ -110,9 +110,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   }, [mes]);
 
   if (escopo === "franqueadora" && !admin) return null;
-  if (escopo === "unidade" && !unidadeId) return <Card className="p-6 text-sm text-muted-foreground">
-    Nenhuma unidade disponível para planejar conteúdos. Cadastre uma unidade primeiro.
-  </Card>;
+  if (escopo === "unidade" && !unidadeId) return <RequerUnidade />;
   const conteudo = (post: Post) => <Card key={post.id} className="p-3 space-y-2 hover:border-primary/40">
     <button className="w-full text-left" onClick={() => abrir(post)}>
       <p className="font-semibold text-sm line-clamp-2">{post.titulo}</p>
@@ -134,10 +132,6 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
       <p className="text-sm text-muted-foreground">Planeje conteúdos, acompanhe a produção e organize a publicação.</p>
     </div><Button onClick={() => abrir()} disabled={escopo === "unidade" && !unidadeId}><Plus className="mr-2 h-4 w-4" /> Novo conteúdo</Button></div>
 
-    {escopo === "unidade" && admin && <div className="max-w-sm"><Label htmlFor="social-unidade">Unidade</Label>
-      <select id="social-unidade" className={classeCampo} value={unidadeId ?? ""} onChange={(e) => setUnidadeSelecionada(e.target.value)}>
-        {unidades.map((unidade) => <option key={unidade.id} value={unidade.id}>{unidade.nome}</option>)}
-      </select></div>}
     <Card className="p-4 border-primary/20 bg-primary/5"><p className="font-semibold">Calendário editorial</p>
       <p className="text-sm text-muted-foreground">“Programado” registra a data no planejamento. A publicação na rede social continua manual até conectar uma conta da plataforma.</p></Card>
 

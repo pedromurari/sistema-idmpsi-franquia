@@ -26,7 +26,7 @@ interface Unidade {
 // nenhum, então só retorna linha se a policy liberar).
 export default function Unidades() {
   const navigate = useNavigate();
-  const { setViewAsId } = useViewAs();
+  const { setViewAsId, recarregarUnidades } = useViewAs();
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogAberto, setDialogAberto] = useState(false);
@@ -50,7 +50,7 @@ export default function Unidades() {
 
   useEffect(carregar, []);
 
-  const verComo = (id: string) => {
+  const abrirUnidade = (id: string) => {
     setViewAsId(id);
     navigate('/dashboard');
   };
@@ -71,6 +71,7 @@ export default function Unidades() {
     setEstado('');
     setDialogAberto(false);
     carregar();
+    void recarregarUnidades();
   };
 
   if (loading) {
@@ -105,8 +106,8 @@ export default function Unidades() {
                 <TableCell>{[u.cidade, u.estado].filter(Boolean).join(' - ') || '—'}</TableCell>
                 <TableCell><Badge variant={u.ativo ? 'default' : 'outline'}>{u.ativo ? 'Ativa' : 'Inativa'}</Badge></TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => verComo(u.id)} className="gap-1.5">
-                    <Eye className="h-3.5 w-3.5" /> Ver como
+                  <Button variant="outline" size="sm" onClick={() => abrirUnidade(u.id)} className="gap-1.5">
+                    <Eye className="h-3.5 w-3.5" /> Abrir operação
                   </Button>
                 </TableCell>
               </TableRow>

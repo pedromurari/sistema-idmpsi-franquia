@@ -182,6 +182,21 @@ async function selecionarUnidade(page: Page, nome = "Unidade Alfa") {
   ).toBeVisible();
 }
 
+test("ADM alterna claramente entre rede e operação de uma unidade", async ({ page }) => {
+  await preparar(page);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/rede$/);
+  await expect(page.getByRole("heading", { name: "Dashboard — Rede IDM PSI" })).toBeVisible();
+  await expect(page.locator("aside").getByRole("link", { name: "Financeiro" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Abrir unidade" }).first().click();
+  await expect(page.getByRole("heading", { name: "Dashboard — Unidade Alfa" })).toBeVisible();
+  await expect(page.locator("aside").getByRole("link", { name: "Financeiro" })).toBeVisible();
+  await page.getByRole("combobox", { name: "Área de trabalho" }).click();
+  await page.getByRole("option", { name: "Franqueadora · rede" }).click();
+  await expect(page).toHaveURL(/\/rede$/);
+  await expect(page.locator("aside").getByRole("link", { name: "Financeiro" })).toHaveCount(0);
+});
+
 test("franqueado cadastra lead da própria unidade, avança etapa e exige motivo da perda", async ({ page }) => {
   const erros: string[] = [];
   page.on("pageerror", (error) => erros.push(error.message));
@@ -245,7 +260,7 @@ test("franqueado não vê nem abre a área de venda de franquias", async ({ page
   await preparar(page, "franqueado");
   await page.goto("/expansao");
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("link", { name: "IDM PSI Franquias" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Venda de franquias" })).toHaveCount(0);
 });
 
 test("página pública de interesse habilita envio após contato e consentimento", async ({ page }) => {
@@ -263,13 +278,18 @@ test("social mídia separa menus e conteúdos da franqueadora e das unidades", a
   const dados = await preparar(page);
   await page.goto("/social-franqueadora");
   await expect(page.getByRole("heading", { name: "Social mídia · Franqueadora" })).toBeVisible();
-  await expect(page.locator("aside").getByText("Gestão das unidades", { exact: true })).toBeVisible();
+  await expect(page.locator("aside").getByText("Franqueadora", { exact: true })).toBeVisible();
+  await expect(page.locator("aside").getByRole("link", { name: "Turmas" })).toHaveCount(0);
   await page.getByRole("button", { name: "Novo conteúdo" }).click();
   await page.getByLabel("Título *").fill("Corte da marca");
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page.getByText("Corte da marca")).toBeVisible();
   expect(dados.franquia_social_posts[0].escopo).toBe("franqueadora");
-  await page.goto("/social-unidade");
+  await page.getByRole("combobox", { name: "Área de trabalho" }).click();
+  await page.getByRole("option", { name: "Unidade Alfa" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.locator("aside").getByText("Unidade: Unidade Alfa", { exact: true })).toBeVisible();
+  await page.locator("aside").getByRole("link", { name: "Social mídia", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Social mídia · Unidade" })).toBeVisible();
   await expect(page.getByText("Corte da marca")).toHaveCount(0);
   await page.getByRole("button", { name: "Novo conteúdo" }).click();
@@ -282,9 +302,11 @@ test("social mídia separa menus e conteúdos da franqueadora e das unidades", a
 
 test("franqueado acessa apenas social mídia da própria unidade", async ({ page }) => {
   const dados = await preparar(page, "franqueado");
+  await page.goto("/rede");
+  await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto("/social-franqueadora");
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("link", { name: "Social mídia · Franqueadora" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Social mídia central" })).toHaveCount(0);
   await page.goto("/social-unidade");
   await expect(page.getByRole("heading", { name: "Social mídia · Unidade" })).toBeVisible();
   await page.getByRole("button", { name: "Novo conteúdo" }).click();

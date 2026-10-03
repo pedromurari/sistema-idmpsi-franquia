@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useViewAs } from '@/contexts/ViewAsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Building2, TrendingUp, TrendingDown, FileText } from 'lucide-react';
+import { Loader2, Building2, TrendingUp, TrendingDown, FileText, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { todasPaginas } from '@/lib/financeiro';
 
 const formatCurrency = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
-interface Lancamento { franquia_id: string; tipo: 'receita' | 'despesa'; valor: number; }
+interface Lancamento { franquia_id: string; tipo: string; valor: number; }
 interface NotaStatus { franquia_id: string; status: string; }
 interface Unidade { id: string; nome: string; ativo: boolean; }
 
@@ -36,24 +38,34 @@ function ResumoUnidade({ franquiaId }: { franquiaId: string }) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [notas, setNotas] = useState<NotaStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
 
   useEffect(() => {
+    let ativo = true;
     setLoading(true);
+    setErro(false);
     Promise.all([
-      supabase.from('franquia_dre_lancamentos').select('franquia_id, tipo, valor').eq('franquia_id', franquiaId),
-      supabase.from('franquia_notas_fiscais').select('franquia_id, status').eq('franquia_id', franquiaId),
-    ]).then(([{ data: dre, error: dreErr }, { data: nf, error: nfErr }]) => {
-      if (dreErr) console.error('Erro ao carregar DRE:', dreErr);
-      if (nfErr) console.error('Erro ao carregar notas:', nfErr);
-      setLancamentos((dre as Lancamento[]) ?? []);
-      setNotas((nf as NotaStatus[]) ?? []);
+      todasPaginas<Lancamento>((de, ate) => supabase.from('franquia_dre_lancamentos')
+        .select('id, franquia_id, tipo, valor').eq('franquia_id', franquiaId).order('id').range(de, ate)),
+      todasPaginas<NotaStatus>((de, ate) => supabase.from('franquia_notas_fiscais')
+        .select('id, franquia_id, status').eq('franquia_id', franquiaId).order('id').range(de, ate)),
+    ]).then(([dre, nf]) => {
+      if (!ativo) return;
+      setLancamentos(dre);
+      setNotas(nf);
       setLoading(false);
+    }).catch((falha) => {
+      if (!ativo) return;
+      console.error('Erro ao carregar resumo da unidade:', falha);
+      setErro(true); setLoading(false);
     });
+    return () => { ativo = false; };
   }, [franquiaId]);
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
+  if (erro) return <Card role="alert" className="p-6">Não foi possível carregar o resumo desta unidade. Atualize a página e tente novamente.</Card>;
 
   const receita = lancamentos.filter((l) => l.tipo === 'receita').reduce((s, l) => s + Number(l.valor), 0);
   const despesa = lancamentos.filter((l) => l.tipo === 'despesa').reduce((s, l) => s + Number(l.valor), 0);
@@ -77,30 +89,41 @@ function ResumoUnidade({ franquiaId }: { franquiaId: string }) {
 
 /** Visão de rede -- franqueador sem nenhuma unidade escolhida no "ver como". */
 function ResumoRede() {
+  const navigate = useNavigate();
+  const { setViewAsId } = useViewAs();
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [notas, setNotas] = useState<NotaStatus[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
 
   useEffect(() => {
+    let ativo = true;
     Promise.all([
-      supabase.from('franquia_dre_lancamentos').select('franquia_id, tipo, valor'),
-      supabase.from('franquia_notas_fiscais').select('franquia_id, status'),
-      supabase.from('franquias').select('id, nome, ativo'),
-    ]).then(([{ data: dre, error: dreErr }, { data: nf, error: nfErr }, { data: un, error: unErr }]) => {
-      if (dreErr) console.error('Erro ao carregar DRE:', dreErr);
-      if (nfErr) console.error('Erro ao carregar notas:', nfErr);
-      if (unErr) console.error('Erro ao carregar unidades:', unErr);
-      setLancamentos((dre as Lancamento[]) ?? []);
-      setNotas((nf as NotaStatus[]) ?? []);
-      setUnidades((un as Unidade[]) ?? []);
+      todasPaginas<Lancamento>((de, ate) => supabase.from('franquia_dre_lancamentos')
+        .select('id, franquia_id, tipo, valor').order('id').range(de, ate)),
+      todasPaginas<NotaStatus>((de, ate) => supabase.from('franquia_notas_fiscais')
+        .select('id, franquia_id, status').order('id').range(de, ate)),
+      todasPaginas<Unidade>((de, ate) => supabase.from('franquias')
+        .select('id, nome, ativo').order('id').range(de, ate)),
+    ]).then(([dre, nf, un]) => {
+      if (!ativo) return;
+      setLancamentos(dre);
+      setNotas(nf);
+      setUnidades(un);
       setLoading(false);
+    }).catch((falha) => {
+      if (!ativo) return;
+      console.error('Erro ao carregar resumo da rede:', falha);
+      setErro(true); setLoading(false);
     });
+    return () => { ativo = false; };
   }, []);
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
+  if (erro) return <Card role="alert" className="p-6">Não foi possível carregar o resumo da rede. Atualize a página e tente novamente.</Card>;
 
   const receita = lancamentos.filter((l) => l.tipo === 'receita').reduce((s, l) => s + Number(l.valor), 0);
   const despesa = lancamentos.filter((l) => l.tipo === 'despesa').reduce((s, l) => s + Number(l.valor), 0);
@@ -113,6 +136,11 @@ function ResumoRede() {
     const pendentes = notas.filter((n) => n.franquia_id === u.id && n.status === 'pendente').length;
     return { ...u, receita: r, despesa: d, resultado: r - d, pendentes };
   });
+
+  const abrirUnidade = (id: string) => {
+    setViewAsId(id);
+    navigate('/dashboard');
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,11 +162,12 @@ function ResumoRede() {
               <TableHead className="text-right">Despesa</TableHead>
               <TableHead className="text-right">Resultado</TableHead>
               <TableHead className="text-right">Notas pendentes</TableHead>
+              <TableHead className="text-right">Operação</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {porUnidade.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma unidade cadastrada ainda.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma unidade cadastrada ainda.</TableCell></TableRow>
             )}
             {porUnidade.map((u) => (
               <TableRow key={u.id}>
@@ -148,6 +177,7 @@ function ResumoRede() {
                 <TableCell className="text-right text-destructive">{formatCurrency(u.despesa)}</TableCell>
                 <TableCell className={`text-right font-semibold ${u.resultado >= 0 ? 'text-success' : 'text-destructive'}`}>{formatCurrency(u.resultado)}</TableCell>
                 <TableCell className="text-right">{u.pendentes > 0 ? <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">{u.pendentes}</Badge> : '—'}</TableCell>
+                <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => abrirUnidade(u.id)}>Abrir unidade <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -157,7 +187,7 @@ function ResumoRede() {
   );
 }
 
-export default function Dashboard() {
+export default function Dashboard({ escopo }: { escopo: 'rede' | 'unidade' }) {
   const { user } = useAuth();
   const { franquiaEfetiva, unidades, viewAsId } = useViewAs();
   const unidadeAtual = unidades.find((u) => u.id === viewAsId);
@@ -165,11 +195,10 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-lg font-bold">
-        {user?.role === 'franqueador'
-          ? (franquiaEfetiva ? `Dashboard — ${unidadeAtual?.nome ?? 'Unidade'}` : 'Dashboard — Rede IDM PSI')
-          : 'Dashboard — Minha Unidade'}
+        {escopo === 'rede' ? 'Dashboard — Rede IDM PSI' : user?.role === 'franqueador'
+          ? `Dashboard — ${unidadeAtual?.nome ?? 'Unidade'}` : 'Dashboard — Minha Unidade'}
       </h1>
-      {franquiaEfetiva ? <ResumoUnidade franquiaId={franquiaEfetiva} /> : <ResumoRede />}
+      {escopo === 'rede' ? <ResumoRede /> : franquiaEfetiva ? <ResumoUnidade franquiaId={franquiaEfetiva} /> : null}
     </div>
   );
 }

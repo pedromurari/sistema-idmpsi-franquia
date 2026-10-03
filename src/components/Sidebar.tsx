@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useViewAs } from '@/contexts/ViewAsContext';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Building2 } from 'lucide-react';
 import { navGroups } from './navGroups';
 
 export function Sidebar() {
   const { user } = useAuth();
+  const { unidades, viewAsId } = useViewAs();
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('franqueadora-sidebar-collapsed') === 'true'; } catch { return false; }
   });
@@ -19,7 +21,8 @@ export function Sidebar() {
     });
   };
 
-  const grupos = navGroups(user?.role ?? 'franqueado');
+  const unidadeAtual = unidades.find((unidade) => unidade.id === viewAsId);
+  const grupos = navGroups(user?.role ?? 'franqueado', unidadeAtual?.nome);
 
   return (
     <aside
@@ -57,6 +60,11 @@ export function Sidebar() {
             {!collapsed && <span className="flex-1">{item.label}</span>}
           </NavLink>
         ))}</div></div>)}
+        {user?.role === 'franqueador' && !viewAsId && !collapsed && <div className="mt-4 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 text-xs">
+          <p className="font-semibold">Operação de uma unidade</p>
+          <p className="mt-1 text-muted-foreground">Escolha uma unidade para abrir Turmas, Comercial, Financeiro e Social mídia local.</p>
+          <NavLink to="/unidades" className="mt-2 inline-flex items-center gap-1 font-semibold text-primary hover:underline"><Building2 className="h-3.5 w-3.5" /> Escolher unidade</NavLink>
+        </div>}
       </nav>
     </aside>
   );

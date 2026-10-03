@@ -34,6 +34,12 @@ terceiros (franqueados), não só dado interno da Onze Digital.
   e planejados para segunda, quarta e sexta a partir de 05/10/2026; aguardam
   revisão e legendas. Mais dois espaços completam a quarta semana.
   Detalhes em [`docs/SOCIAL_MIDIA.md`](docs/SOCIAL_MIDIA.md).
+- **Áreas de trabalho separadas**: o ADM começa em `/rede`, com visão consolidada,
+  unidades, venda de franquias e conteúdo central. Ao escolher uma unidade,
+  abre o painel e os módulos operacionais dela; o nome da unidade aparece no
+  menu e no indicador de área atual. O franqueado entra direto na própria
+  unidade e não recebe os menus da franqueadora. A seleção da unidade é apenas
+  contexto de navegação: o isolamento dos dados continua garantido pela RLS.
 
 ## O que falta pra ir pra produção de verdade
 

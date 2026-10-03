@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { ViewAsProvider } from '@/contexts/ViewAsContext';
+import { ViewAsProvider, useViewAs } from '@/contexts/ViewAsContext';
 import { Layout } from '@/components/Layout';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
@@ -30,14 +30,28 @@ function ProtectedRoute({ children, somenteFranqueador = false }: { children: Re
   return <Layout>{children}</Layout>;
 }
 
+function HomeRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return <Navigate to={user?.role === 'franqueador' ? '/rede' : '/dashboard'} replace />;
+}
+
+function PainelUnidade() {
+  const { user } = useAuth();
+  const { franquiaEfetiva } = useViewAs();
+  if (user?.role === 'franqueador' && !franquiaEfetiva) return <Navigate to="/unidades" replace />;
+  return <Dashboard escopo="unidade" />;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
 
   return (
     <Routes>
-      <Route path="/login" element={loading ? null : user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/login" element={loading ? null : user ? <HomeRedirect /> : <Login />} />
       <Route path="/quero-ser-franqueado" element={<CapturaFranquia />} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/rede" element={<ProtectedRoute somenteFranqueador><Dashboard escopo="rede" /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><PainelUnidade /></ProtectedRoute>} />
       <Route path="/unidades" element={<ProtectedRoute somenteFranqueador><Unidades /></ProtectedRoute>} />
       <Route path="/dre" element={<ProtectedRoute><DreUnidade /></ProtectedRoute>} />
       <Route path="/turmas" element={<ProtectedRoute><Turmas /></ProtectedRoute>} />
@@ -47,7 +61,7 @@ function AppRoutes() {
       <Route path="/sugestoes" element={<ProtectedRoute somenteFranqueador><Sugestoes /></ProtectedRoute>} />
       <Route path="/social-unidade" element={<ProtectedRoute><SocialMidia escopo="unidade" /></ProtectedRoute>} />
       <Route path="/notas" element={<ProtectedRoute><NotasFiscais /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
   );
 }

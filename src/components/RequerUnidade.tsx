@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 // por quê antes de voltar pra Unidades.
 export function RequerUnidade() {
   useEffect(() => {
-    toast.info('Escolha uma unidade no "Ver como" (ou crie uma) antes de acessar essa tela.');
+    toast.info('Escolha uma unidade na lista para abrir essa área.');
   }, []);
   return <Navigate to="/unidades" replace />;
 }
