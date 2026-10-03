@@ -27,6 +27,14 @@ Não copiar código: adaptar o conceito a multi-tenant (`franquia_id`), RLS+GRAN
 
 ## Fases propostas (nesta ordem)
 
+**Fase A implementada em 03/10/2026:** migration `0011_comercial_canais_campanhas.sql`
+com canais padrão da rede e canais próprios por unidade, campanhas vinculadas a
+canal/unidade, migração de `origem` existente sem apagar o texto, RLS + GRANT +
+auditoria e teste de associação cruzada. `/comercial` agora oferece criação de
+canal e campanha, vínculo ao lead, filtros com contagens e indicadores de
+matrícula e follow-up. A lista inicial de oito canais abaixo é editável pelo
+processo de evolução do catálogo; confirmar os nomes oficiais com a operação.
+
 **A — Canais e campanhas.** Tabelas `franquia_canais` (padrão da franqueadora +
 canais próprios da unidade) e `franquia_campanhas`; `franquia_leads.canal` e
 `campanha_id`. Filtro por canal com contagem e cards de visão geral (total de leads,

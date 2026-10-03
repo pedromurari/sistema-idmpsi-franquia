@@ -47,6 +47,92 @@ export type Database = {
         }
         Relationships: []
       }
+      franquia_campanhas: {
+        Row: {
+          ativo: boolean
+          canal_id: string
+          created_at: string
+          franquia_id: string
+          id: string
+          nome: string
+          oferta: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          canal_id: string
+          created_at?: string
+          franquia_id: string
+          id?: string
+          nome: string
+          oferta?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          canal_id?: string
+          created_at?: string
+          franquia_id?: string
+          id?: string
+          nome?: string
+          oferta?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_campanhas_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "franquia_canais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "franquia_campanhas_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      franquia_canais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          franquia_id: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          franquia_id?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          franquia_id?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_canais_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquia_captura_rate_limits: {
         Row: {
           chave: string
@@ -301,6 +387,8 @@ export type Database = {
       franquia_leads: {
         Row: {
           bolsa_percentual: number
+          campanha_id: string | null
+          canal_id: string | null
           created_at: string
           criado_por: string
           desconto_percentual: number
@@ -321,6 +409,8 @@ export type Database = {
         }
         Insert: {
           bolsa_percentual?: number
+          campanha_id?: string | null
+          canal_id?: string | null
           created_at?: string
           criado_por?: string
           desconto_percentual?: number
@@ -341,6 +431,8 @@ export type Database = {
         }
         Update: {
           bolsa_percentual?: number
+          campanha_id?: string | null
+          canal_id?: string | null
           created_at?: string
           criado_por?: string
           desconto_percentual?: number
@@ -360,6 +452,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "franquia_leads_campanha_mesma_unidade"
+            columns: ["franquia_id", "campanha_id"]
+            isOneToOne: false
+            referencedRelation: "franquia_campanhas"
+            referencedColumns: ["franquia_id", "id"]
+          },
+          {
+            foreignKeyName: "franquia_leads_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "franquia_canais"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "franquia_leads_franquia_id_fkey"
             columns: ["franquia_id"]
@@ -609,13 +715,30 @@ export type Database = {
         }
         Insert: {
           area: string
+          // O trigger BEFORE INSERT preenche autor e nome; o navegador não tem GRANT nessas colunas.
+          autor_id?: string
+          autor_nome?: string
+          created_at?: string
+          id?: string
+          resposta?: string | null
           rota: string
+          status?: string
           texto: string
           tipo?: string
+          updated_at?: string
         }
         Update: {
+          area?: string
+          autor_id?: string
+          autor_nome?: string
+          created_at?: string
+          id?: string
           resposta?: string | null
+          rota?: string
           status?: string
+          texto?: string
+          tipo?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -734,6 +857,7 @@ export type Database = {
       }
       franquia_is_franqueador: { Args: never; Returns: boolean }
       franquia_minha_unidade: { Args: never; Returns: string }
+      franquia_usuario_ativo: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

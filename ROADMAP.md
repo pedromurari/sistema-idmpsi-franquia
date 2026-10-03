@@ -25,8 +25,9 @@ franquia, com RLS e GRANT. Falta automação de follow-up, score automático,
 cadastro real de aluno/matrícula e integração com campanhas.
 
 **Prioridade (Pedro, 02/10/2026): o comercial entregue está cru perto do
-interno.** Falta paridade em canais, campanhas, vendedor, vendas por
-vendedor, metas/comissão e dados em gráficos. Especificação completa, em
+interno.** A fase A (canais e campanhas por unidade, filtros e indicadores)
+foi entregue em 03/10/2026. Falta paridade em rotina do vendedor, vendedores,
+vendas por vendedor, metas/comissão e dados em gráficos. Especificação completa, em
 fases, em [`docs/COMERCIAL_PARIDADE.md`](docs/COMERCIAL_PARIDADE.md) — ler
 antes de mexer em `/comercial`.
 

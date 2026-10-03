@@ -606,3 +606,46 @@ test("sugestões da equipe: banco define autor e status, leitura isolada, tratam
   ).rows.map((linha) => linha.acao);
   assert.deepEqual(trilha, ["insert", "update"]);
 });
+
+test("canais e campanhas preservam origem antiga e bloqueiam associação entre unidades", async () => {
+  await como(alunoA,
+    "insert into franquia_leads(franquia_id,nome,email,origem) values ($1,'Lead legado','legado@example.test','Evento antigo')",
+    [unidadeA]);
+  await db.exec(await readFile(new URL("../supabase/migrations/0011_comercial_canais_campanhas.sql", import.meta.url), "utf8"));
+  const legado = (await como(alunoA,
+    "select l.origem,c.nome from franquia_leads l join franquia_canais c on c.id=l.canal_id where l.email='legado@example.test'"
+  )).rows[0];
+  assert.equal(legado.origem, "Evento antigo");
+  assert.equal(legado.nome, "Evento antigo");
+  assert.equal((await como(alunoA, "select nome from franquia_canais where franquia_id is null")).rows.length, 8);
+  await como(alunoA,
+    "insert into franquia_canais(franquia_id,nome) values ($1,'Evento A')", [unidadeA]);
+  await como(alunoB,
+    "insert into franquia_canais(franquia_id,nome) values ($1,'Evento B')", [unidadeB]);
+  const canalA = (await como(alunoA,
+    "select id from franquia_canais where franquia_id=$1 and nome='Evento A'", [unidadeA])).rows[0].id;
+  const canalB = (await como(alunoB,
+    "select id from franquia_canais where franquia_id=$1 and nome='Evento B'", [unidadeB])).rows[0].id;
+  assert.equal((await como(alunoA,
+    "select id from franquia_canais where id=$1", [canalB])).rows.length, 0);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_campanhas(franquia_id,canal_id,nome) values ($1,$2,'Errada')", [unidadeA,canalB]),
+    /canal não pertence/);
+  await como(alunoA,
+    "insert into franquia_campanhas(franquia_id,canal_id,nome,tipo,oferta) values ($1,$2,'Campanha A','novo','Oferta teste')",
+    [unidadeA,canalA]);
+  const campanhaA = (await como(alunoA,
+    "select id from franquia_campanhas where nome='Campanha A'")).rows[0].id;
+  assert.equal((await como(alunoB,
+    "select id from franquia_campanhas where id=$1", [campanhaA])).rows.length, 0);
+  await assert.rejects(como(alunoB,
+    "insert into franquia_leads(franquia_id,nome,email,canal_id,campanha_id) values ($1,'Inválido','invalido@example.test',$2,$3)",
+    [unidadeB,canalB,campanhaA]), /violates foreign key|campanha não pertence/);
+  await assert.rejects(como(alunoA,
+    "update franquia_leads set canal_id=$1 where email='legado@example.test'", [canalB]),
+    /canal não pertence/);
+  const semGrants = (await db.query(`select has_table_privilege('anon','public.franquia_canais','select') as anon_canal,
+    has_table_privilege('authenticated','public.franquia_canais','truncate') as truncar`)).rows[0];
+  assert.equal(semGrants.anon_canal, false);
+  assert.equal(semGrants.truncar, false);
+});

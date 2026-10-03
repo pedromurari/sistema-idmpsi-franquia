@@ -23,7 +23,9 @@ terceiros (franqueados), não só dado interno da Onze Digital.
   franqueador lê.
 - **Comercial** (`/comercial`) — leads por unidade, etapas do funil, próxima
   ação manual, propostas de bolsa/desconto, histórico de etapa e meta mensal
-  de matrículas por turma. A etapa "matrícula" não cria aluno ou cobrança.
+  de matrículas por turma. Canais padrão da rede e canais locais, campanhas por
+  unidade, filtros por canal/campanha e indicadores de matrícula e follow-up.
+  A etapa "matrícula" não cria aluno ou cobrança.
 - **Expansão de franquias** (`/expansao`) — Kanban e campanhas de venda de
   novas unidades, exclusivo da administração. É separado do funil de alunos.
 - **Social mídia**: `/social-franqueadora` para o ADM e `/social-unidade` para

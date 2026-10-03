@@ -79,6 +79,11 @@ async function preparar(
     ],
     franquia_lead_etapas: [],
     franquia_metas_turma: [],
+    franquia_canais: [
+      { id: "canal-direto", franquia_id: null, nome: "Direto", ativo: true },
+      { id: "canal-b", franquia_id: "unidade-b", nome: "Parceiro Beta", ativo: true },
+    ],
+    franquia_campanhas: [],
     franquia_expansao_leads: [],
     franquia_expansao_campanhas: [],
     franquia_expansao_responsaveis: [
@@ -118,6 +123,7 @@ async function preparar(
       const item = {
         id: `novo-${Date.now()}`,
         updated_at: new Date().toISOString(),
+        ...(["franquia_canais", "franquia_campanhas"].includes(tabela) ? { ativo: true } : {}),
         ...payload,
       };
       dados[tabela].push(item);
@@ -219,6 +225,35 @@ test("franqueado cadastra lead da própria unidade, avança etapa e exige motivo
   await page.getByRole("button", { name: "Salvar lead" }).click();
   await expect(page.getByRole("region", { name: "Perdido" }).getByText("Maria Silva")).toBeVisible();
   expect(erros).toEqual([]);
+});
+
+test("comercial cria canal e campanha da unidade e filtra leads sem misturar a outra unidade", async ({ page }) => {
+  const dados = await preparar(page, "franqueado");
+  await page.goto("/comercial");
+  await expect(page.getByRole("button", { name: /Parceiro Beta/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Novo canal" }).click();
+  await page.getByLabel("Nome do canal").fill("Indicação local");
+  await page.getByRole("button", { name: "Criar canal" }).click();
+  await expect.poll(() => dados.franquia_canais.length).toBe(3);
+  await expect(page.getByRole("button", { name: /Indicação local/ })).toBeVisible();
+  const canal = dados.franquia_canais.find((item) => item.nome === "Indicação local");
+  expect(canal?.franquia_id).toBe("unidade-a");
+  await page.getByRole("button", { name: "Nova campanha" }).click();
+  await page.getByLabel("Nome da campanha").fill("Aulão de outubro");
+  await page.getByLabel("Canal", { exact: true }).selectOption(String(canal?.id));
+  await page.getByRole("button", { name: "Criar campanha" }).click();
+  await page.getByRole("button", { name: "Novo lead" }).click();
+  await page.getByLabel("Nome *").fill("Ana da campanha");
+  await page.getByLabel("E-mail").fill("ana@example.test");
+  await page.getByLabel("Canal de aquisição").selectOption(String(canal?.id));
+  await page.getByRole("dialog", { name: "Novo lead" }).getByLabel("Campanha", { exact: true }).selectOption(String(dados.franquia_campanhas[0].id));
+  await page.getByRole("button", { name: "Salvar lead" }).click();
+  await expect(page.getByText("Ana da campanha")).toBeVisible();
+  expect(dados.franquia_leads.find((item) => item.nome === "Ana da campanha")?.campanha_id).toBe(dados.franquia_campanhas[0].id);
+  await page.getByRole("button", { name: /Direto · 0/ }).click();
+  await expect(page.getByText("Ana da campanha")).toHaveCount(0);
+  await page.getByRole("button", { name: /Indicação local · 1/ }).click();
+  await expect(page.getByText("Ana da campanha")).toBeVisible();
 });
 
 test("admin define meta mensal por turma sem criar dados na outra unidade", async ({ page }) => {
