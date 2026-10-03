@@ -47,6 +47,24 @@ export type Database = {
         }
         Relationships: []
       }
+      franquia_captura_rate_limits: {
+        Row: {
+          chave: string
+          envios: number
+          janela_inicio: string
+        }
+        Insert: {
+          chave: string
+          envios?: number
+          janela_inicio?: string
+        }
+        Update: {
+          chave?: string
+          envios?: number
+          janela_inicio?: string
+        }
+        Relationships: []
+      }
       franquia_dre_lancamentos: {
         Row: {
           categoria: string
@@ -519,6 +537,62 @@ export type Database = {
           },
         ]
       }
+      franquia_social_posts: {
+        Row: {
+          created_at: string
+          criado_por: string
+          data_publicacao: string | null
+          escopo: string
+          franquia_id: string | null
+          id: string
+          legenda: string
+          media_url: string | null
+          observacoes: string
+          status: string
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string
+          data_publicacao?: string | null
+          escopo: string
+          franquia_id?: string | null
+          id?: string
+          legenda?: string
+          media_url?: string | null
+          observacoes?: string
+          status?: string
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string
+          data_publicacao?: string | null
+          escopo?: string
+          franquia_id?: string | null
+          id?: string
+          legenda?: string
+          media_url?: string | null
+          observacoes?: string
+          status?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_social_posts_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquia_turmas: {
         Row: {
           ativo: boolean
@@ -628,6 +702,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      franquia_captura_admitir: {
+        Args: { p_contato_hash: string; p_ip_hash: string }
+        Returns: boolean
+      }
       franquia_is_franqueador: { Args: never; Returns: boolean }
       franquia_minha_unidade: { Args: never; Returns: string }
     }

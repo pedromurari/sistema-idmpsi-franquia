@@ -2,12 +2,9 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Building2, Calculator, FileText, GraduationCap, ChevronLeft, ChevronRight, UsersRound, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { navGroups } from './navGroups';
 
-// Mesmo padrão visual do CRM interno (src/components/crm/Sidebar.tsx): barra
-// branca fixa à esquerda, item ativo em bg-primary/8 + text-primary, botão de
-// recolher flutuando na borda. Sem drag-reorder/grupos aqui de propósito --
-// são só 4 itens, não precisa da complexidade toda do CRM interno.
 export function Sidebar() {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(() => {
@@ -22,15 +19,7 @@ export function Sidebar() {
     });
   };
 
-  const itens = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    ...(user?.role === 'franqueador' ? [{ to: '/unidades', label: 'Unidades', icon: Building2 }] : []),
-    { to: '/turmas', label: 'Turmas', icon: GraduationCap },
-    { to: '/comercial', label: 'Comercial', icon: UsersRound },
-    ...(user?.role === 'franqueador' ? [{ to: '/expansao', label: 'IDM PSI Franquias', icon: TrendingUp }] : []),
-    { to: '/dre', label: 'Financeiro', icon: Calculator },
-    { to: '/notas', label: 'Notas Fiscais', icon: FileText },
-  ];
+  const grupos = navGroups(user?.role ?? 'franqueado');
 
   return (
     <aside
@@ -48,7 +37,10 @@ export function Sidebar() {
       </button>
 
       <nav className={cn('space-y-0.5 flex-1 pt-4', collapsed ? 'px-2' : 'px-3')}>
-        {itens.map((item) => (
+        {grupos.map((grupo, index) => <div key={grupo.titulo} className={index ? 'mt-4 border-t pt-4' : ''}>
+          {!collapsed && <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{grupo.titulo}</p>}
+          {collapsed && <span className="sr-only">{grupo.titulo}</span>}
+          <div className="space-y-0.5">{grupo.itens.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -64,7 +56,7 @@ export function Sidebar() {
             <item.icon className="h-4.5 w-4.5 flex-shrink-0" />
             {!collapsed && <span className="flex-1">{item.label}</span>}
           </NavLink>
-        ))}
+        ))}</div></div>)}
       </nav>
     </aside>
   );

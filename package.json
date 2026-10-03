@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "test": "node --test tests/financeiro.test.ts tests/database.test.mjs tests/captura.test.ts",
+    "test": "node --test tests/financeiro.test.ts tests/database.test.mjs tests/captura.test.ts tests/social.test.ts",
     "test:ui": "playwright test"
   },
   "dependencies": {

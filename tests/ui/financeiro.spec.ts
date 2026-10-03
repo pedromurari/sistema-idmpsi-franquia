@@ -85,6 +85,7 @@ async function preparar(
       { id: "rodrygo", nome: "Rodrygo", ativo: true },
       { id: "marcos", nome: "Marcos", ativo: true },
     ],
+    franquia_social_posts: [],
   };
   await page.route("https://portal-test.supabase.co/**", async (route) => {
     const request = route.request();
@@ -247,11 +248,49 @@ test("franqueado não vê nem abre a área de venda de franquias", async ({ page
   await expect(page.getByRole("link", { name: "IDM PSI Franquias" })).toHaveCount(0);
 });
 
-test("página pública de interesse não aceita captura sem verificação configurada", async ({ page }) => {
+test("página pública de interesse habilita envio após contato e consentimento", async ({ page }) => {
   await page.goto("/quero-ser-franqueado");
   await expect(page.getByRole("heading", { name: /Quer conhecer a oportunidade/ })).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("temporariamente indisponível");
-  await expect(page.getByRole("button", { name: "Quero saber mais" })).toHaveCount(0);
+  const botao = page.getByRole("button", { name: "Quero saber mais" });
+  await expect(botao).toBeDisabled();
+  await page.getByLabel("Nome *").fill("Maria Silva");
+  await page.getByLabel("E-mail").fill("maria@example.test");
+  await page.getByRole("checkbox").check();
+  await expect(botao).toBeEnabled();
+});
+
+test("social mídia separa menus e conteúdos da franqueadora e das unidades", async ({ page }) => {
+  const dados = await preparar(page);
+  await page.goto("/social-franqueadora");
+  await expect(page.getByRole("heading", { name: "Social mídia · Franqueadora" })).toBeVisible();
+  await expect(page.locator("aside").getByText("Gestão das unidades", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Novo conteúdo" }).click();
+  await page.getByLabel("Título *").fill("Corte da marca");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByText("Corte da marca")).toBeVisible();
+  expect(dados.franquia_social_posts[0].escopo).toBe("franqueadora");
+  await page.goto("/social-unidade");
+  await expect(page.getByRole("heading", { name: "Social mídia · Unidade" })).toBeVisible();
+  await expect(page.getByText("Corte da marca")).toHaveCount(0);
+  await page.getByRole("button", { name: "Novo conteúdo" }).click();
+  await page.getByLabel("Título *").fill("Corte da unidade");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByText("Corte da unidade")).toBeVisible();
+  expect(dados.franquia_social_posts[1].escopo).toBe("unidade");
+  expect(dados.franquia_social_posts[1].franquia_id).toBe("unidade-a");
+});
+
+test("franqueado acessa apenas social mídia da própria unidade", async ({ page }) => {
+  const dados = await preparar(page, "franqueado");
+  await page.goto("/social-franqueadora");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("link", { name: "Social mídia · Franqueadora" })).toHaveCount(0);
+  await page.goto("/social-unidade");
+  await expect(page.getByRole("heading", { name: "Social mídia · Unidade" })).toBeVisible();
+  await page.getByRole("button", { name: "Novo conteúdo" }).click();
+  await page.getByLabel("Título *").fill("Conteúdo local");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  expect(dados.franquia_social_posts[0].franquia_id).toBe("unidade-a");
 });
 
 test("admin cria turma, lança receita, baixa no caixa e configura royalties sem afetar competência anterior", async ({

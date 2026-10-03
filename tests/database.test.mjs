@@ -86,6 +86,12 @@ before(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    await readFile(
+      new URL("../supabase/migrations/0009_social_midia.sql", import.meta.url),
+      "utf8",
+    ),
+  );
 });
 after(async () => {
   await db.close();
@@ -503,4 +509,24 @@ test("limite de captura é atômico e inacessível a visitantes e franqueados", 
   } finally {
     await db.exec("reset role");
   }
+});
+
+test("social mídia separa franqueadora e unidades no banco", async () => {
+  const global = await como(admin,
+    "insert into franquia_social_posts(escopo,titulo,criado_por) values ('franqueadora','Corte geral',$1) returning id", [admin]);
+  const local = await como(alunoA,
+    "insert into franquia_social_posts(escopo,franquia_id,titulo,criado_por) values ('unidade',$1,'Corte da unidade A',$2) returning id", [unidadeA, alunoA]);
+  assert.equal((await como(alunoA, "select id from franquia_social_posts")).rows.length, 1);
+  assert.equal((await como(alunoB, "select id from franquia_social_posts")).rows.length, 0);
+  assert.equal((await como(admin, "select id from franquia_social_posts")).rows.length, 2);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_social_posts(escopo,titulo,criado_por) values ('franqueadora','Invasão',$1)", [alunoA]), /row-level security/);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_social_posts(escopo,franquia_id,titulo,criado_por) values ('unidade',$1,'Invasão',$2)", [unidadeB, alunoA]), /row-level security/);
+  assert.equal((await como(alunoA,
+    "update franquia_social_posts set titulo='Alterado' where id=$1 returning id", [global.rows[0].id])).rows.length, 0);
+  assert.equal((await como(alunoA,
+    "delete from franquia_social_posts where id=$1 returning id", [global.rows[0].id])).rows.length, 0);
+  await assert.rejects(como(alunoA,
+    "update franquia_social_posts set franquia_id=$1 where id=$2", [unidadeB, local.rows[0].id]), /row-level security/);
 });

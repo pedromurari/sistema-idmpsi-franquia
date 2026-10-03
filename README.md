@@ -26,6 +26,14 @@ terceiros (franqueados), não só dado interno da Onze Digital.
   de matrículas por turma. A etapa "matrícula" não cria aluno ou cobrança.
 - **Expansão de franquias** (`/expansao`) — Kanban e campanhas de venda de
   novas unidades, exclusivo da administração. É separado do funil de alunos.
+- **Social mídia**: `/social-franqueadora` para o ADM e `/social-unidade` para
+  cada unidade. Calendário, grade, Kanban e edição de conteúdos compartilham
+  o login do portal; a RLS separa o planejamento geral do de cada franqueado.
+  “Programado” representa calendário interno, sem publicação automática nas redes.
+  Os 10 primeiros cortes da franqueadora foram vinculados aos vídeos do Drive
+  e planejados para segunda, quarta e sexta a partir de 05/10/2026; aguardam
+  revisão e legendas. Mais dois espaços completam a quarta semana.
+  Detalhes em [`docs/SOCIAL_MIDIA.md`](docs/SOCIAL_MIDIA.md).
 
 ## O que falta pra ir pra produção de verdade
 

@@ -13,6 +13,7 @@ import Turmas from '@/pages/Turmas';
 import Comercial from '@/pages/Comercial';
 import ExpansaoFranquias from '@/pages/ExpansaoFranquias';
 import CapturaFranquia from '@/pages/CapturaFranquia';
+import SocialMidia from '@/pages/SocialMidia';
 import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -41,6 +42,8 @@ function AppRoutes() {
       <Route path="/turmas" element={<ProtectedRoute><Turmas /></ProtectedRoute>} />
       <Route path="/comercial" element={<ProtectedRoute><Comercial /></ProtectedRoute>} />
       <Route path="/expansao" element={<ProtectedRoute somenteFranqueador><ExpansaoFranquias /></ProtectedRoute>} />
+      <Route path="/social-franqueadora" element={<ProtectedRoute somenteFranqueador><SocialMidia escopo="franqueadora" /></ProtectedRoute>} />
+      <Route path="/social-unidade" element={<ProtectedRoute><SocialMidia escopo="unidade" /></ProtectedRoute>} />
       <Route path="/notas" element={<ProtectedRoute><NotasFiscais /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
