@@ -24,6 +24,12 @@ desconto e meta mensal por turma. Migração 0005 aplicada no Supabase da
 franquia, com RLS e GRANT. Falta automação de follow-up, score automático,
 cadastro real de aluno/matrícula e integração com campanhas.
 
+**Prioridade (Pedro, 02/10/2026): o comercial entregue está cru perto do
+interno.** Falta paridade em canais, campanhas, vendedor, vendas por
+vendedor, metas/comissão e dados em gráficos. Especificação completa, em
+fases, em [`docs/COMERCIAL_PARIDADE.md`](docs/COMERCIAL_PARIDADE.md) — ler
+antes de mexer em `/comercial`.
+
 **Referência no CRM interno:** `TimeComercial.tsx` (funil + campanhas +
 canal de aquisição) e `Pipeline.tsx` já resolvem um funil parecido lá --
 é o melhor ponto de partida para as partes ainda pendentes, adaptado pra
