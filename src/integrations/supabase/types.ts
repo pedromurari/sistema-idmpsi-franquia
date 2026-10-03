@@ -593,6 +593,32 @@ export type Database = {
           },
         ]
       }
+      franquia_sugestoes: {
+        Row: {
+          area: string
+          autor_id: string
+          autor_nome: string
+          created_at: string
+          id: string
+          resposta: string | null
+          rota: string
+          status: string
+          texto: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          rota: string
+          texto: string
+          tipo?: string
+        }
+        Update: {
+          resposta?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       franquia_turmas: {
         Row: {
           ativo: boolean

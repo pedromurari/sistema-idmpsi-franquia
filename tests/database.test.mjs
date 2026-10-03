@@ -530,3 +530,79 @@ test("social mídia separa franqueadora e unidades no banco", async () => {
   await assert.rejects(como(alunoA,
     "update franquia_social_posts set franquia_id=$1 where id=$2", [unidadeB, local.rows[0].id]), /row-level security/);
 });
+
+test("sugestões da equipe: banco define autor e status, leitura isolada, tratamento só do admin", async () => {
+  await db.exec(
+    await readFile(
+      new URL("../supabase/migrations/0010_sugestoes.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await como(
+    alunoA,
+    "insert into franquia_sugestoes(rota,area,tipo,texto) values ('/dre','Financeiro','melhoria','Mostrar total por mês')",
+  );
+  // Autor e status não podem ser informados pelo navegador.
+  await assert.rejects(
+    como(
+      alunoA,
+      "insert into franquia_sugestoes(autor_id,rota,area,texto) values ($1,'/dre','Financeiro','texto forjado')",
+      [alunoB],
+    ),
+    /permission denied/,
+  );
+  await assert.rejects(
+    como(
+      alunoA,
+      "insert into franquia_sugestoes(rota,area,status,texto) values ('/dre','Financeiro','feito','já feito')",
+    ),
+    /permission denied/,
+  );
+  const propria = (
+    await como(alunoA, "select autor_id, autor_nome, status from franquia_sugestoes")
+  ).rows;
+  assert.equal(propria.length, 1);
+  assert.equal(propria[0].autor_id, alunoA);
+  assert.equal(propria[0].autor_nome, "A");
+  assert.equal(propria[0].status, "novo");
+  // Cada autor lê só as próprias; o franqueador lê todas.
+  assert.equal((await como(alunoB, "select * from franquia_sugestoes")).rows.length, 0);
+  assert.equal((await como(admin, "select * from franquia_sugestoes")).rows.length, 1);
+  // Quem não é franqueador não consegue mudar status (a RLS zera as linhas).
+  assert.equal(
+    (await como(alunoA, "update franquia_sugestoes set status='feito'")).affectedRows,
+    0,
+  );
+  await como(
+    admin,
+    "update franquia_sugestoes set status='em_andamento', resposta='Entra na fase E'",
+  );
+  assert.equal(
+    (await como(admin, "select status from franquia_sugestoes")).rows[0].status,
+    "em_andamento",
+  );
+  // Ninguém reescreve o texto nem apaga; conta inativa não envia.
+  await assert.rejects(
+    como(admin, "update franquia_sugestoes set texto='alterado'"),
+    /permission denied/,
+  );
+  await assert.rejects(
+    como(admin, "delete from franquia_sugestoes"),
+    /permission denied/,
+  );
+  await assert.rejects(
+    como(
+      inativo,
+      "insert into franquia_sugestoes(rota,area,texto) values ('/dre','Financeiro','conta inativa')",
+    ),
+    /row-level security/,
+  );
+  // Envio e tratamento ficam na trilha de auditoria.
+  const trilha = (
+    await como(
+      admin,
+      "select acao from franquia_audit_log where tabela='franquia_sugestoes' order by id",
+    )
+  ).rows.map((linha) => linha.acao);
+  assert.deepEqual(trilha, ["insert", "update"]);
+});

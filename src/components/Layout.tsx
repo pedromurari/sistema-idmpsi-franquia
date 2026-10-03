@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { FeedbackBox } from './FeedbackBox';
 import { navGroups } from './navGroups';
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -20,7 +21,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </nav>
       <div className="flex flex-1 min-h-0">
         <Sidebar />
-        <main className="flex-1 min-w-0 overflow-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 min-w-0 overflow-auto p-4 lg:p-6">{children}<FeedbackBox /></main>
       </div>
     </div>
   );
