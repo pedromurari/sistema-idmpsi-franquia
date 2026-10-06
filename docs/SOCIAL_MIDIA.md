@@ -31,3 +31,13 @@ O status “Programado” é apenas uma data no calendário editorial. Publicaç
 automática em Instagram, Facebook ou outra rede exigirá conexão específica
 das contas, autorização e tratamento de falhas da plataforma. Até lá, o
 processo de postagem é manual.
+
+A migration `0013_social_horario.sql` acrescenta a hora planejada no fuso de
+Brasília. Em 06/10/2026, o Corte 01 foi reposicionado para o mesmo dia às 08h
+e o Corte 02 ficou em 07/10 às 20h. As legendas dos dez vídeos disponíveis
+foram preparadas a partir de transcrição local e salvas com o script
+`scripts/legendas_cortes_outubro.sql`. Os Cortes 01 e 02 estão como
+“Programado” no calendário editorial; os demais continuam “Em revisão”,
+aguardando definição de horário e validação editorial. Os Cortes 11 e 12
+continuam sem vídeo, portanto sem legenda. “Programado” não publica o post
+automaticamente em nenhuma rede social.

@@ -674,3 +674,15 @@ test("atividades comerciais são imutáveis e isoladas por unidade", async () =>
   await assert.rejects(como(admin,
     "delete from franquia_lead_atividades where lead_id=$1", [lead]), /permission denied/);
 });
+
+test("social mídia guarda a hora planejada sem alterar o escopo do post", async () => {
+  await db.exec(await readFile(new URL("../supabase/migrations/0013_social_horario.sql", import.meta.url), "utf8"));
+  await como(admin,
+    "insert into franquia_social_posts(escopo,titulo,criado_por,data_publicacao,hora_publicacao) values ('franqueadora','Corte às oito',$1,'2026-10-07','08:00')",
+    [admin]);
+  const post = (await como(admin,
+    "select data_publicacao, hora_publicacao from franquia_social_posts where titulo='Corte às oito'")).rows[0];
+  assert.equal(post.hora_publicacao, "08:00:00");
+  assert.equal((await como(alunoA,
+    "select id from franquia_social_posts where titulo='Corte às oito'")).rows.length, 0);
+});

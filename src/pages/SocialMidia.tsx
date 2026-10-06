@@ -18,10 +18,10 @@ import { RequerUnidade } from "@/components/RequerUnidade";
 
 type Post = Database["public"]["Tables"]["franquia_social_posts"]["Row"];
 type Escopo = "franqueadora" | "unidade";
-type Formulario = Pick<Post, "titulo" | "legenda" | "tipo" | "status" | "data_publicacao" | "media_url" | "observacoes">;
+type Formulario = Pick<Post, "titulo" | "legenda" | "tipo" | "status" | "data_publicacao" | "hora_publicacao" | "media_url" | "observacoes">;
 const hojeLocal = () => { const agora = new Date(); return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`; };
 const vazio = (data?: string): Formulario => ({ titulo: "", legenda: "", tipo: "reel", status: "planejado",
-  data_publicacao: data || hojeLocal(), media_url: null, observacoes: "" });
+  data_publicacao: data || hojeLocal(), hora_publicacao: null, media_url: null, observacoes: "" });
 const dataBR = (valor: string | null) => valor ? `${valor.slice(8, 10)}/${valor.slice(5, 7)}/${valor.slice(0, 4)}` : "Sem data";
 const classeCampo = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -53,19 +53,20 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   function abrir(post?: Post, data?: string) {
     setEditando(post ?? null);
     setForm(post ? { titulo: post.titulo, legenda: post.legenda, tipo: post.tipo, status: post.status,
-      data_publicacao: post.data_publicacao, media_url: post.media_url, observacoes: post.observacoes } : vazio(data));
+      data_publicacao: post.data_publicacao, hora_publicacao: post.hora_publicacao,
+      media_url: post.media_url, observacoes: post.observacoes } : vazio(data));
   }
 
   async function salvar(event: FormEvent) {
     event.preventDefault();
     if (!user || (escopo === "unidade" && !unidadeId) || salvando) return;
-    if (["agendado", "publicado"].includes(form.status) && (!form.media_url || !form.legenda.trim() || !form.data_publicacao)) {
-      toast.error("Para programar ou publicar, informe data, legenda e link do conteúdo."); return;
+    if (["agendado", "publicado"].includes(form.status) && (!form.media_url || !form.legenda.trim() || !form.data_publicacao || !form.hora_publicacao)) {
+      toast.error("Para programar ou publicar, informe data, hora, legenda e link do conteúdo."); return;
     }
     setSalvando(true);
     const valores = { ...form, titulo: form.titulo.trim(), legenda: form.legenda.trim(),
       observacoes: form.observacoes.trim(), media_url: form.media_url?.trim() || null,
-      data_publicacao: form.data_publicacao || null };
+      data_publicacao: form.data_publicacao || null, hora_publicacao: form.hora_publicacao || null };
     const resultado = editando
       ? await supabase.from("franquia_social_posts").update(valores).eq("id", editando.id)
           .eq("updated_at", editando.updated_at).select("id")
@@ -81,8 +82,8 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   }
 
   async function mudarStatus(post: Post, status: string) {
-    if (["agendado", "publicado"].includes(status) && (!post.media_url || !post.legenda.trim() || !post.data_publicacao)) {
-      toast.error("Adicione o link do conteúdo e a legenda antes de programar."); return;
+    if (["agendado", "publicado"].includes(status) && (!post.media_url || !post.legenda.trim() || !post.data_publicacao || !post.hora_publicacao)) {
+      toast.error("Adicione data, hora, link e legenda antes de programar."); return;
     }
     const { data, error } = await supabase.from("franquia_social_posts").update({ status })
       .eq("id", post.id).eq("updated_at", post.updated_at).select("id");
@@ -114,7 +115,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const conteudo = (post: Post) => <Card key={post.id} className="p-3 space-y-2 hover:border-primary/40">
     <button className="w-full text-left" onClick={() => abrir(post)}>
       <p className="font-semibold text-sm line-clamp-2">{post.titulo}</p>
-      <p className="text-xs text-muted-foreground mt-1">{dataBR(post.data_publicacao)} · {SOCIAL_TIPOS.find((tipo) => tipo.id === post.tipo)?.label}</p>
+      <p className="text-xs text-muted-foreground mt-1">{dataBR(post.data_publicacao)}{post.hora_publicacao ? ` às ${post.hora_publicacao.slice(0, 5)}` : ""} · {SOCIAL_TIPOS.find((tipo) => tipo.id === post.tipo)?.label}</p>
     </button>
     <div className="flex items-center gap-2">
       <select aria-label={`Status de ${post.titulo}`} value={post.status} onChange={(e) => void mudarStatus(post, e.target.value)}
@@ -123,6 +124,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
       </select>
       {post.media_url && <a href={post.media_url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir mídia de ${post.titulo}`}><ExternalLink className="h-4 w-4 text-primary" /></a>}
     </div>
+    {post.status === "agendado" && <p className="text-xs text-amber-700">Publicação manual no horário planejado</p>}
     {!post.media_url && <p className="text-xs text-amber-700">Arquivo/link pendente</p>}
   </Card>;
 
@@ -169,6 +171,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
         <DialogDescription>Organize o conteúdo para a {escopo === "franqueadora" ? "franqueadora" : "unidade selecionada"}.</DialogDescription></DialogHeader>
         <form onSubmit={(e) => void salvar(e)} className="space-y-3"><div><Label htmlFor="social-titulo">Título *</Label><Input id="social-titulo" required maxLength={160} minLength={2} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="social-data">Data planejada</Label><Input id="social-data" type="date" value={form.data_publicacao ?? ""} onChange={(e) => setForm({ ...form, data_publicacao: e.target.value || null })} /></div>
+            <div><Label htmlFor="social-hora">Hora (Brasília)</Label><Input id="social-hora" type="time" value={form.hora_publicacao?.slice(0, 5) ?? ""} onChange={(e) => setForm({ ...form, hora_publicacao: e.target.value || null })} /></div>
             <div><Label htmlFor="social-tipo">Tipo</Label><select id="social-tipo" className={classeCampo} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>{SOCIAL_TIPOS.map((tipo) => <option key={tipo.id} value={tipo.id}>{tipo.label}</option>)}</select></div></div>
           <div><Label htmlFor="social-status">Status</Label><select id="social-status" className={classeCampo} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>{SOCIAL_STATUS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
           <div><Label htmlFor="social-midia-url">Link do vídeo ou arte</Label><Input id="social-midia-url" type="url" placeholder="https://drive.google.com/..." maxLength={2000} value={form.media_url ?? ""} onChange={(e) => setForm({ ...form, media_url: e.target.value })} /></div>

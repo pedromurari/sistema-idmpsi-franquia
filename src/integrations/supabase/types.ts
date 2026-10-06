@@ -691,6 +691,7 @@ export type Database = {
           data_publicacao: string | null
           escopo: string
           franquia_id: string | null
+          hora_publicacao: string | null
           id: string
           legenda: string
           media_url: string | null
@@ -706,6 +707,7 @@ export type Database = {
           data_publicacao?: string | null
           escopo: string
           franquia_id?: string | null
+          hora_publicacao?: string | null
           id?: string
           legenda?: string
           media_url?: string | null
@@ -721,6 +723,7 @@ export type Database = {
           data_publicacao?: string | null
           escopo?: string
           franquia_id?: string | null
+          hora_publicacao?: string | null
           id?: string
           legenda?: string
           media_url?: string | null
