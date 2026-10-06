@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErroCarregamento } from "@/components/financeiro/Shared";
 import { RequerUnidade } from "@/components/RequerUnidade";
+import { CopiesAnuncios } from "@/components/social/CopiesAnuncios";
 
 type Post = Database["public"]["Tables"]["franquia_social_posts"]["Row"];
 type Escopo = "franqueadora" | "unidade";
@@ -32,6 +33,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const admin = user?.role === "franqueador";
   const unidadeId = escopo === "unidade" ? franquiaEfetiva : null;
   const [visualizacao, setVisualizacao] = useState<"grade" | "calendario" | "kanban">("grade");
+  const [quadro, setQuadro] = useState<"cortes" | "copies">("cortes");
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("todos");
   const [mes, setMes] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -39,7 +41,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const [form, setForm] = useState<Formulario>(() => vazio());
   const [salvando, setSalvando] = useState(false);
   const chave = ["social-midia", escopo, unidadeId];
-  const consulta = useQuery({ queryKey: chave, enabled: !!user && (escopo === "franqueadora" ? admin : !!unidadeId),
+  const consulta = useQuery({ queryKey: chave, enabled: !!user && (escopo === "franqueadora" ? admin && quadro === "cortes" : !!unidadeId),
     queryFn: ({ signal }) => todasPaginas<Post>((de, ate) => {
       let query = supabase.from("franquia_social_posts").select("*").eq("escopo", escopo);
       query = escopo === "franqueadora" ? query.is("franquia_id", null) : query.eq("franquia_id", unidadeId!);
@@ -112,6 +114,18 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
 
   if (escopo === "franqueadora" && !admin) return null;
   if (escopo === "unidade" && !unidadeId) return <RequerUnidade />;
+  const seletorQuadro = escopo === "franqueadora" && <div role="tablist" aria-label="Quadros do social mídia central"
+    className="inline-flex flex-wrap gap-1 rounded-lg border bg-muted/30 p-1">
+    <Button role="tab" aria-selected={quadro === "cortes"} variant={quadro === "cortes" ? "default" : "ghost"}
+      onClick={() => setQuadro("cortes")}>Cortes</Button>
+    <Button role="tab" aria-selected={quadro === "copies"} variant={quadro === "copies" ? "default" : "ghost"}
+      onClick={() => setQuadro("copies")}>Copies para anúncios</Button>
+  </div>;
+  if (escopo === "franqueadora" && quadro === "copies") return <div className="mx-auto max-w-[1600px] space-y-5">
+    <div><h1 className="text-2xl font-bold">Social mídia · Franqueadora</h1>
+      <p className="text-sm text-muted-foreground">Planeje os conteúdos e anúncios da rede.</p></div>
+    {seletorQuadro}<CopiesAnuncios />
+  </div>;
   const conteudo = (post: Post) => <Card key={post.id} className="p-3 space-y-2 hover:border-primary/40">
     <button className="w-full text-left" onClick={() => abrir(post)}>
       <p className="font-semibold text-sm line-clamp-2">{post.titulo}</p>
@@ -133,6 +147,8 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
       <h1 className="text-2xl font-bold">Social mídia · {escopo === "franqueadora" ? "Franqueadora" : "Unidade"}</h1>
       <p className="text-sm text-muted-foreground">Planeje conteúdos, acompanhe a produção e organize a publicação.</p>
     </div><Button onClick={() => abrir()} disabled={escopo === "unidade" && !unidadeId}><Plus className="mr-2 h-4 w-4" /> Novo conteúdo</Button></div>
+
+    {seletorQuadro}
 
     <Card className="p-4 border-primary/20 bg-primary/5"><p className="font-semibold">Calendário editorial</p>
       <p className="text-sm text-muted-foreground">“Programado” registra a data no planejamento. A publicação na rede social continua manual até conectar uma conta da plataforma.</p></Card>

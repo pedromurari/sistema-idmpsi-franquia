@@ -18,6 +18,16 @@ unidade. Os links de mídia ficam na linha do post; o módulo não copia vídeos
 para o Supabase Storage. Os arquivos do Drive continuam com as permissões
 definidas no Drive, que precisam permitir acesso a quem vai abrir cada link.
 
+No Social Mídia Central, o seletor **Cortes / Copies para anúncios** alterna
+entre dois quadros independentes. Cortes continua em `franquia_social_posts`,
+com grade, calendário e Kanban. Copies usa `franquia_social_copies`, criada
+pela migration `0014_social_copies.sql`, com briefing, texto do anúncio,
+chamada para ação, referência, prazo e etapas Pendente → Em criação → Em
+revisão → Aprovada → Em uso. Pode-se cadastrar uma pendência sem texto pronto;
+aprovar exige texto. Apenas franqueadores podem ler e editar essas copies,
+conforme RLS e GRANT. As alterações são auditadas, e não há exclusão pelo
+portal. O quadro de copies não aparece no Social Mídia da unidade.
+
 Os scripts idempotentes `scripts/planejar_10_cortes_outubro.sql` e
 `scripts/planejar_2_cortes_pendentes.sql` foram aplicados manualmente no
 projeto `bremvrsjmnsvtpgcsgtj` em 02/10/2026. Os links dos vídeos foram

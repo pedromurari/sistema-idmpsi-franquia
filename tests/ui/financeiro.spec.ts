@@ -92,6 +92,7 @@ async function preparar(
       { id: "marcos", nome: "Marcos", ativo: true },
     ],
     franquia_social_posts: [],
+    franquia_social_copies: [],
   };
   await page.route("https://portal-test.supabase.co/**", async (route) => {
     const request = route.request();
@@ -376,6 +377,28 @@ test("franqueado acessa apenas social mídia da própria unidade", async ({ page
   await page.getByLabel("Título *").fill("Conteúdo local");
   await page.getByRole("button", { name: "Salvar" }).click();
   expect(dados.franquia_social_posts[0].franquia_id).toBe("unidade-a");
+});
+
+test("social central alterna entre cortes e copies com pendências independentes", async ({ page }) => {
+  const dados = await preparar(page);
+  await page.goto("/social-franqueadora");
+  await expect(page.getByRole("tab", { name: "Cortes" })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Copies para anúncios" }).click();
+  await expect(page.getByRole("heading", { name: "Copies para anúncios" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Novo conteúdo" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Nova pendência" }).click();
+  await page.getByLabel("Título *").fill("Anúncio da nova turma");
+  await page.getByLabel("Briefing / objetivo").fill("Captar interessados na turma de outubro");
+  await page.getByLabel("Prazo").fill("2026-10-10");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByRole("button", { name: /Anúncio da nova turma/ })).toBeVisible();
+  expect(dados.franquia_social_copies).toHaveLength(1);
+  expect(dados.franquia_social_posts).toHaveLength(0);
+  await page.getByLabel("Status de Anúncio da nova turma").selectOption("criacao");
+  await expect(page.getByRole("region", { name: "Em criação" }).getByText("Anúncio da nova turma")).toBeVisible();
+  await page.getByRole("tab", { name: "Cortes" }).click();
+  await expect(page.getByRole("button", { name: "Novo conteúdo" })).toBeVisible();
+  await expect(page.getByText("Anúncio da nova turma")).toHaveCount(0);
 });
 
 test("admin cria turma, lança receita, baixa no caixa e configura royalties sem afetar competência anterior", async ({

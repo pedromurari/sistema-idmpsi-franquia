@@ -684,6 +684,51 @@ export type Database = {
           },
         ]
       }
+      franquia_social_copies: {
+        Row: {
+          id: string
+          titulo: string
+          briefing: string
+          texto_anuncio: string
+          chamada_acao: string
+          referencia_url: string | null
+          prazo: string | null
+          status: string
+          observacoes: string
+          criado_por: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          titulo: string
+          briefing?: string
+          texto_anuncio?: string
+          chamada_acao?: string
+          referencia_url?: string | null
+          prazo?: string | null
+          status?: string
+          observacoes?: string
+          criado_por?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          titulo?: string
+          briefing?: string
+          texto_anuncio?: string
+          chamada_acao?: string
+          referencia_url?: string | null
+          prazo?: string | null
+          status?: string
+          observacoes?: string
+          criado_por?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       franquia_social_posts: {
         Row: {
           created_at: string

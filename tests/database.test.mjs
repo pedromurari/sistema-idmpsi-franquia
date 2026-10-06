@@ -686,3 +686,30 @@ test("social mídia guarda a hora planejada sem alterar o escopo do post", async
   assert.equal((await como(alunoA,
     "select id from franquia_social_posts where titulo='Corte às oito'")).rows.length, 0);
 });
+
+test("copies de anúncios ficam isoladas para a franqueadora e auditadas", async () => {
+  await db.exec(await readFile(new URL("../supabase/migrations/0014_social_copies.sql", import.meta.url), "utf8"));
+  const permissoes = (await db.query(`select
+    has_table_privilege('anon','public.franquia_social_copies','select') as anon_leitura,
+    has_table_privilege('authenticated','public.franquia_social_copies','delete') as exclusao,
+    has_column_privilege('authenticated','public.franquia_social_copies','criado_por','update') as muda_autor`)).rows[0];
+  assert.deepEqual(permissoes, { anon_leitura: false, exclusao: false, muda_autor: false });
+  const criado = (await como(admin,
+    "insert into franquia_social_copies(titulo,briefing) values ('Anúncio matrícula','Turma de outubro') returning id,status,criado_por"
+  )).rows[0];
+  assert.equal(criado.status, "pendente");
+  assert.equal(criado.criado_por, admin);
+  assert.equal((await como(alunoA, "select * from franquia_social_copies")).rows.length, 0);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_social_copies(titulo) values ('Outra copy')"), /row-level security/);
+  assert.equal((await como(alunoA,
+    "update franquia_social_copies set status='aprovada' where id=$1", [criado.id])).affectedRows, 0);
+  await como(admin,
+    "update franquia_social_copies set status='criacao',texto_anuncio='Inscreva-se' where id=$1", [criado.id]);
+  const trilha = (await como(admin,
+    "select acao from franquia_audit_log where tabela='franquia_social_copies' and registro_id=$1 order by id",
+    [criado.id])).rows.map((linha) => linha.acao);
+  assert.deepEqual(trilha, ["insert", "update"]);
+  await assert.rejects(como(admin,
+    "delete from franquia_social_copies where id=$1", [criado.id]), /permission denied/);
+});
