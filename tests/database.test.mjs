@@ -649,3 +649,28 @@ test("canais e campanhas preservam origem antiga e bloqueiam associação entre 
   assert.equal(semGrants.anon_canal, false);
   assert.equal(semGrants.truncar, false);
 });
+
+test("atividades comerciais são imutáveis e isoladas por unidade", async () => {
+  await db.exec(await readFile(new URL("../supabase/migrations/0012_comercial_atividades.sql", import.meta.url), "utf8"));
+  const lead = (await como(alunoA,
+    "select id from franquia_leads where email='legado@example.test'")).rows[0].id;
+  await como(alunoA,
+    "insert into franquia_lead_atividades(franquia_id,lead_id,tipo,resultado,nota) values ($1,$2,'ligacao','atendeu','Conversou sobre a turma')",
+    [unidadeA, lead]);
+  const atividade = (await como(alunoA,
+    "select ator, resultado, nota from franquia_lead_atividades where lead_id=$1", [lead])).rows[0];
+  assert.equal(atividade.ator, alunoA);
+  assert.equal(atividade.resultado, "atendeu");
+  assert.equal((await como(alunoB,
+    "select id from franquia_lead_atividades where lead_id=$1", [lead])).rows.length, 0);
+  await assert.rejects(como(alunoB,
+    "insert into franquia_lead_atividades(franquia_id,lead_id,tipo,nota) values ($1,$2,'nota','Invasão')",
+    [unidadeA, lead]), /row-level security/);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_lead_atividades(franquia_id,lead_id,tipo,nota,ator) values ($1,$2,'nota','Forjada',$3)",
+    [unidadeA, lead, alunoB]), /permission denied/);
+  await assert.rejects(como(alunoA,
+    "update franquia_lead_atividades set nota='Alterada' where lead_id=$1", [lead]), /permission denied/);
+  await assert.rejects(como(admin,
+    "delete from franquia_lead_atividades where lead_id=$1", [lead]), /permission denied/);
+});

@@ -336,6 +336,47 @@ export type Database = {
         }
         Relationships: []
       }
+      franquia_lead_atividades: {
+        Row: {
+          ator: string
+          created_at: string
+          franquia_id: string
+          id: string
+          lead_id: string
+          nota: string | null
+          resultado: string | null
+          tipo: string
+        }
+        Insert: {
+          ator?: string
+          created_at?: string
+          franquia_id: string
+          id?: string
+          lead_id: string
+          nota?: string | null
+          resultado?: string | null
+          tipo: string
+        }
+        Update: {
+          ator?: string
+          created_at?: string
+          franquia_id?: string
+          id?: string
+          lead_id?: string
+          nota?: string | null
+          resultado?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_lead_atividades_franquia_id_lead_id_fkey"
+            columns: ["franquia_id", "lead_id"]
+            isOneToOne: false
+            referencedRelation: "franquia_leads"
+            referencedColumns: ["franquia_id", "id"]
+          },
+        ]
+      }
       franquia_lead_etapas: {
         Row: {
           ator: string | null

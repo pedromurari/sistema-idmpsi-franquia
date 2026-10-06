@@ -78,6 +78,7 @@ async function preparar(
       { id: "lead-b", franquia_id: "unidade-b", nome: "Lead de outra unidade", email: "outra@example.test", telefone: null, etapa: "lead", turma_id: "turma-b", score: null, proxima_acao_em: null, proxima_acao: null, bolsa_percentual: 0, desconto_percentual: 0, motivo_perda: null, observacoes: null, origem: null, updated_at: timestamp },
     ],
     franquia_lead_etapas: [],
+    franquia_lead_atividades: [],
     franquia_metas_turma: [],
     franquia_canais: [
       { id: "canal-direto", franquia_id: null, nome: "Direto", ativo: true },
@@ -254,6 +255,26 @@ test("comercial cria canal e campanha da unidade e filtra leads sem misturar a o
   await expect(page.getByText("Ana da campanha")).toHaveCount(0);
   await page.getByRole("button", { name: /Indicação local · 1/ }).click();
   await expect(page.getByText("Ana da campanha")).toBeVisible();
+});
+
+test("comercial destaca retorno vencido e registra contato no histórico do lead", async ({ page }) => {
+  const dados = await preparar(page, "franqueado");
+  await page.goto("/comercial");
+  await page.getByRole("button", { name: "Novo lead" }).click();
+  await page.getByLabel("Nome *").fill("Contato pendente");
+  await page.getByLabel("Telefone").fill("11999998888");
+  await page.getByLabel("Próxima ação: data").fill("2026-01-01");
+  await page.getByLabel("Próxima ação", { exact: true }).fill("Retornar ligação");
+  await page.getByRole("button", { name: "Salvar lead" }).click();
+  await page.getByRole("button", { name: /Retornos atrasados · 1/ }).click();
+  await expect(page.getByText("Contato pendente")).toBeVisible();
+  await page.getByRole("button", { name: "Histórico e contato" }).click();
+  await expect(page.getByRole("link", { name: "Abrir WhatsApp" })).toHaveAttribute("href", "https://wa.me/5511999998888");
+  await page.getByLabel("Resultado da ligação").selectOption("nao_atendeu");
+  await page.getByLabel("Detalhes do contato").fill("Tentar amanhã");
+  await page.getByRole("button", { name: "Registrar atividade" }).click();
+  await expect(page.getByText("Ligação: nao atendeu")).toBeVisible();
+  expect(dados.franquia_lead_atividades[0].franquia_id).toBe("unidade-a");
 });
 
 test("admin define meta mensal por turma sem criar dados na outra unidade", async ({ page }) => {

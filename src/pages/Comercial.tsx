@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Search, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { RequerUnidade } from "@/components/RequerUnidade";
+import { HistoricoLead } from "@/components/comercial/HistoricoLead";
 import { Campo, ErroCarregamento, Indicador, selectClass } from "@/components/financeiro/Shared";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,6 +35,8 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
   const [busca, setBusca] = useState("");
   const [canalFiltro, setCanalFiltro] = useState("todos");
   const [campanhaFiltro, setCampanhaFiltro] = useState("todas");
+  const [somenteAtrasados, setSomenteAtrasados] = useState(false);
+  const [historicoLead, setHistoricoLead] = useState<Lead | null>(null);
   const [editando, setEditando] = useState<Lead | null | undefined>();
   const [metaTurma, setMetaTurma] = useState<Turma | null>(null);
   const [novoCanal, setNovoCanal] = useState(false);
@@ -45,12 +48,14 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
 
   const { leads, canais, campanhas } = comercial.data;
   const lista = leads.filter((lead) =>
+    (!somenteAtrasados || (lead.proxima_acao_em !== null && lead.proxima_acao_em < hoje() && !["perdido", "formado", "pos_graduacao"].includes(lead.etapa))) &&
     (canalFiltro === "todos" || lead.canal_id === canalFiltro || (canalFiltro === "sem-canal" && !lead.canal_id)) &&
     (campanhaFiltro === "todas" || lead.campanha_id === campanhaFiltro) &&
     `${lead.nome} ${lead.email ?? ""} ${lead.telefone ?? ""}`.toLocaleLowerCase("pt-BR")
       .includes(busca.toLocaleLowerCase("pt-BR")));
   const emMatricula = leads.filter((lead) => lead.etapa === "matricula").length;
   const followUps = leads.filter((lead) => lead.proxima_acao_em && !["perdido", "formado", "pos_graduacao"].includes(lead.etapa)).length;
+  const atrasados = leads.filter((lead) => lead.proxima_acao_em && lead.proxima_acao_em < hoje() && !["perdido", "formado", "pos_graduacao"].includes(lead.etapa)).length;
   const campanhasDoCanal = campanhas.filter((campanha) => campanha.ativo && (canalFiltro === "todos" || campanha.canal_id === canalFiltro));
   const realizados = new Map<string, Set<string>>();
   for (const item of comercial.data.etapas) {
@@ -70,7 +75,7 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Indicador label="Contatos no funil" value={leads.length} />
       <Indicador label="Em matrícula" value={emMatricula} hint={leads.length ? `${Math.round(emMatricula / leads.length * 100)}% dos contatos` : "Sem contatos"} />
-      <Indicador label="Follow-ups marcados" value={followUps} hint="Ações com data registrada" />
+      <Indicador label="Follow-ups marcados" value={followUps} hint={`${atrasados} atrasado(s)`} />
       <Indicador label="Meta do mês" value={totalMeta || "—"} hint={totalMeta ? `${Math.round(totalRealizado / totalMeta * 100)}% alcançado` : "Defina metas por turma"} />
     </div>
     <Card className="p-4 space-y-3">
@@ -110,7 +115,9 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
           <Input aria-label="Buscar leads" placeholder="Buscar por nome, e-mail ou telefone" value={busca} onChange={(e) => setBusca(e.target.value)} className="pl-9" /></div>
       </div>
     </Card>
-    <div className="text-sm text-muted-foreground">{lista.length} contato(s) no filtro atual</div>
+    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground"><span>{lista.length} contato(s) no filtro atual</span>
+      <Button size="sm" variant={somenteAtrasados ? "default" : "outline"} onClick={() => setSomenteAtrasados(!somenteAtrasados)}>
+        Retornos atrasados · {atrasados}</Button></div>
     <div className="flex gap-3 overflow-x-auto pb-3" aria-label="Funil comercial">
       {etapas.map(([valor, titulo]) => {
         const itens = lista.filter((lead) => lead.etapa === valor);
@@ -125,11 +132,13 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
             {lead.turma_id && <p className="text-xs">{turmas.data.find((t) => t.id === lead.turma_id)?.nome ?? "Turma vinculada"}</p>}
             {lead.proxima_acao_em && <p className={`text-xs ${lead.proxima_acao_em < hoje() ? "text-destructive" : "text-muted-foreground"}`}>Próxima ação: {formatData(lead.proxima_acao_em)} · {lead.proxima_acao}</p>}
             {lead.score !== null && <p className="text-xs text-muted-foreground">Score: {lead.score}/100</p>}
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setHistoricoLead(lead)}>Histórico e contato</Button>
           </Card>)}
         </section>;
       })}
     </div>
     {editando !== undefined && <LeadDialog key={editando?.id ?? "novo"} franquiaId={franquiaId} lead={editando} turmas={turmas.data} canais={canais} campanhas={campanhas} fechar={() => setEditando(undefined)} />}
+    {historicoLead && <HistoricoLead key={historicoLead.id} lead={historicoLead} fechar={() => setHistoricoLead(null)} />}
     {novoCanal && <CanalDialog franquiaId={franquiaId} fechar={() => setNovoCanal(false)} />}
     {novaCampanha && <CampanhaDialog franquiaId={franquiaId} canais={canais} fechar={() => setNovaCampanha(false)} />}
     {metaTurma && <MetaDialog key={`${metaTurma.id}:${mes}`} franquiaId={franquiaId} turma={metaTurma} mes={mes}

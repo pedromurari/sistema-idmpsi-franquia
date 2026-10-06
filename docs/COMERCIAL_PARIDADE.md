@@ -70,6 +70,13 @@ não), trajetória (já existe `franquia_lead_etapas`), nota do vendedor separad
 observações de origem, follow-up manual com prazo e contador de tentativas, alerta de
 vencido, busca por nome/telefone, exclusão controlada e auditada.
 
+**F parcial implementada em 06/10/2026:** `0012_comercial_atividades.sql` cria
+histórico imutável de ligações e notas por lead/unidade, com RLS, GRANT e auditoria.
+O card abre WhatsApp e linha do tempo (atividades + mudanças de etapa). O funil
+destaca retornos atrasados e permite filtrá-los; a data/descrição da próxima ação
+continuam editáveis no lead. Contador de tentativas e exclusão controlada ficam
+para a próxima iteração, junto da definição do papel de vendedor.
+
 Ordem sugerida: **A → F (parcial) → B → C → D → E.** E pode começar logo após A,
 com os dados que já existem.
 
