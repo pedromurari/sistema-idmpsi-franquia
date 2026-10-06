@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { todasPaginas, formatCurrency } from "@/lib/financeiro";
+import { dataHoraLead } from "@/lib/dataHoraLead";
 import { Campo, ErroCarregamento, Indicador, selectClass } from "@/components/financeiro/Shared";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -101,6 +102,7 @@ export default function ExpansaoFranquias() {
             {itens.map((lead) => <Card key={lead.id} className="p-3 space-y-2"><div className="flex justify-between gap-2"><strong className="text-sm truncate">{lead.nome}</strong>
               <Button size="icon" variant="ghost" aria-label={`Editar ${lead.nome}`} onClick={() => setEditando(lead)}><Pencil className="h-4 w-4" /></Button></div>
               {lead.cidade && <p className="text-xs text-muted-foreground">{lead.cidade}{lead.estado ? `/${lead.estado}` : ""}</p>}
+              <p className="text-xs text-muted-foreground">Entrada (Brasília): {dataHoraLead(lead.created_at)}</p>
               {lead.whatsapp && <div className="flex gap-1"><a className="text-xs border rounded px-2 py-1 flex-1 text-center" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}><MessageCircle className="inline h-3 w-3 mr-1" />WhatsApp</a>
                 <a className="border rounded px-2 py-1" aria-label={`Ligar para ${lead.nome}`} href={`tel:${lead.whatsapp.replace(/\D/g, "")}`}><Phone className="h-3 w-3" /></a></div>}
               <select aria-label={`Responsável de ${lead.nome}`} className={`${selectClass} h-8 text-xs`} value={lead.responsavel_id ?? ""} onChange={(e) => void atribuir(lead, e.target.value)}><option value="">Atribuir responsável...</option>
@@ -109,9 +111,9 @@ export default function ExpansaoFranquias() {
             </Card>)}</div></section>; })}
       </div>
       <Card className="p-4"><h2 className="font-semibold mb-3">Todos os leads · {encontrados.length}</h2>
-        {encontrados.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum interessado encontrado.</p> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-2">Nome</th><th className="p-2">Contato</th><th className="p-2">Cidade</th><th className="p-2">Fase</th><th className="p-2">Responsável</th><th className="p-2">Entrada</th></tr></thead>
+        {encontrados.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum interessado encontrado.</p> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-2">Nome</th><th className="p-2">Contato</th><th className="p-2">Cidade</th><th className="p-2">Fase</th><th className="p-2">Responsável</th><th className="p-2">Entrada (Brasília)</th></tr></thead>
           <tbody>{encontrados.map((lead) => <tr key={lead.id} className="border-b cursor-pointer hover:bg-muted/40" onClick={() => setEditando(lead)}><td className="p-2 font-medium">{lead.nome}</td><td className="p-2">{lead.whatsapp || lead.email}</td><td className="p-2">{lead.cidade || "—"}</td>
-            <td className="p-2">{FASES.find((f) => f.id === lead.fase)?.nome}</td><td className="p-2">{responsaveis.find((r) => r.id === lead.responsavel_id)?.nome || "—"}</td><td className="p-2">{new Date(lead.created_at).toLocaleDateString("pt-BR")}</td></tr>)}</tbody></table></div>}</Card>
+            <td className="p-2">{FASES.find((f) => f.id === lead.fase)?.nome}</td><td className="p-2">{responsaveis.find((r) => r.id === lead.responsavel_id)?.nome || "—"}</td><td className="p-2">{dataHoraLead(lead.created_at)}</td></tr>)}</tbody></table></div>}</Card>
     </> : <>
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><Indicador label="Gasto total" value={formatCurrency(totais.gasto)} /><Indicador label="Impressões" value={totais.impressoes.toLocaleString("pt-BR")} />
         <Indicador label="Cliques" value={totais.cliques.toLocaleString("pt-BR")} /><Indicador label="Leads" value={totais.leads.toLocaleString("pt-BR")} />
@@ -165,7 +167,8 @@ function LeadDialog({ lead, responsaveis, fechar }: { lead: Lead | null; respons
     await client.invalidateQueries({ queryKey: ["expansao"] }); toast.success("Lead arquivado."); fechar();
   }
   return <Dialog open onOpenChange={(open) => { if (!open && !salvando) fechar(); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{lead ? "Editar interessado" : "Novo interessado"}</DialogTitle>
-    <DialogDescription>Lead para compra de franquia. Estes contatos são visíveis somente à administração.</DialogDescription></DialogHeader>
+    <DialogDescription>Lead para compra de franquia. Estes contatos são visíveis somente à administração.
+      {lead && <span className="block mt-1">Entrada: {dataHoraLead(lead.created_at)} (Brasília)</span>}</DialogDescription></DialogHeader>
     <form onSubmit={(e) => void salvar(e)} className="space-y-4"><fieldset disabled={salvando} className="space-y-4"><div className="grid gap-3 sm:grid-cols-2">
       <Campo id="exp-nome" label="Nome *"><Input id="exp-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={160} required /></Campo>
       <Campo id="exp-whatsapp" label="WhatsApp"><Input id="exp-whatsapp" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} /></Campo>

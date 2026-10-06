@@ -15,6 +15,7 @@ import { useComercial, type Canal, type Campanha, type Lead } from "@/hooks/useC
 import { useTurmas } from "@/hooks/useFinanceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { formatData, hoje, mesAtual, type Turma } from "@/lib/financeiro";
+import { dataHoraLead } from "@/lib/dataHoraLead";
 
 const etapas = [
   ["lead", "Lead"], ["atendimento", "Atendimento"], ["experiencia", "Entrevista / experiência"],
@@ -127,6 +128,7 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
           {itens.map((lead) => <Card key={lead.id} className="p-3 space-y-2">
             <div className="flex justify-between gap-2"><strong className="text-sm break-words">{lead.nome}</strong>
               <Button variant="ghost" size="icon" aria-label={`Editar ${lead.nome}`} onClick={() => setEditando(lead)}><Pencil className="h-4 w-4" /></Button></div>
+            <p className="text-xs text-muted-foreground">Entrada (Brasília): {dataHoraLead(lead.created_at)}</p>
             <p className="text-xs text-muted-foreground break-all">{lead.email || lead.telefone}</p>
             {lead.canal_id && <p className="text-xs">{canais.find((canal) => canal.id === lead.canal_id)?.nome ?? lead.origem ?? "Canal"}{lead.campanha_id ? ` · ${campanhas.find((campanha) => campanha.id === lead.campanha_id)?.nome ?? "Campanha"}` : ""}</p>}
             {lead.turma_id && <p className="text-xs">{turmas.data.find((t) => t.id === lead.turma_id)?.nome ?? "Turma vinculada"}</p>}
@@ -207,7 +209,8 @@ function LeadDialog({ franquiaId, lead, turmas, canais, campanhas, fechar }: { f
 
   return <Dialog open onOpenChange={(open) => { if (!open && !salvando) fechar(); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
     <DialogHeader><DialogTitle>{lead ? "Editar lead" : "Novo lead"}</DialogTitle>
-      <DialogDescription>Dados comerciais da unidade. Bolsa e desconto são propostas, sem efeito financeiro automático.</DialogDescription></DialogHeader>
+      <DialogDescription>Dados comerciais da unidade. Bolsa e desconto são propostas, sem efeito financeiro automático.
+        {lead && <span className="block mt-1">Entrada: {dataHoraLead(lead.created_at)} (Brasília)</span>}</DialogDescription></DialogHeader>
     <form onSubmit={(e) => void salvar(e)} className="space-y-4"><fieldset disabled={salvando} className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
         <Campo id="lead-nome" label="Nome *"><Input id="lead-nome" value={nome} maxLength={160} onChange={(e) => setNome(e.target.value)} required /></Campo>

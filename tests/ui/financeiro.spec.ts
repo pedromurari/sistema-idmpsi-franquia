@@ -75,7 +75,7 @@ async function preparar(
     franquia_royalties_regras: [],
     franquia_notas_fiscais: [],
     franquia_leads: [
-      { id: "lead-b", franquia_id: "unidade-b", nome: "Lead de outra unidade", email: "outra@example.test", telefone: null, etapa: "lead", turma_id: "turma-b", score: null, proxima_acao_em: null, proxima_acao: null, bolsa_percentual: 0, desconto_percentual: 0, motivo_perda: null, observacoes: null, origem: null, updated_at: timestamp },
+      { id: "lead-b", franquia_id: "unidade-b", nome: "Lead de outra unidade", email: "outra@example.test", telefone: null, etapa: "lead", turma_id: "turma-b", score: null, proxima_acao_em: null, proxima_acao: null, bolsa_percentual: 0, desconto_percentual: 0, motivo_perda: null, observacoes: null, origem: null, created_at: "2026-10-06T11:30:00Z", updated_at: timestamp },
     ],
     franquia_lead_etapas: [],
     franquia_lead_atividades: [],
@@ -124,6 +124,7 @@ async function preparar(
       const payload = request.postDataJSON();
       const item = {
         id: `novo-${Date.now()}`,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...(["franquia_canais", "franquia_campanhas"].includes(tabela) ? { ativo: true } : {}),
         ...payload,
@@ -377,6 +378,22 @@ test("franqueado acessa apenas social mídia da própria unidade", async ({ page
   await page.getByLabel("Título *").fill("Conteúdo local");
   await page.getByRole("button", { name: "Salvar" }).click();
   expect(dados.franquia_social_posts[0].franquia_id).toBe("unidade-a");
+});
+
+test("cards de leads mostram data e hora de entrada em Brasília nos dois funis", async ({ page }) => {
+  const dados = await preparar(page);
+  dados.franquia_expansao_leads.push({ id: "expansao-data", nome: "Interessado franquia", whatsapp: "5511999999999",
+    email: null, cidade: "São Paulo", estado: "SP", fase: "novo", responsavel_id: null,
+    arquivado_em: null, created_at: "2026-10-06T11:30:00Z", updated_at: "2026-10-06T11:30:00Z" });
+  await page.goto("/expansao");
+  await expect(page.getByRole("region", { name: "Novo" }).getByText("Interessado franquia")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Novo" }).getByText("Entrada (Brasília): 06/10/2026, 08:30")).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Entrada (Brasília)" })).toBeVisible();
+  await page.getByRole("combobox", { name: "Área de trabalho" }).click();
+  await page.getByRole("option", { name: "Unidade Beta" }).click();
+  await expect(page.getByRole("heading", { name: "Dashboard — Unidade Beta" })).toBeVisible();
+  await page.getByRole("link", { name: "Comercial", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Lead", exact: true }).getByText("Entrada (Brasília): 06/10/2026, 08:30")).toBeVisible();
 });
 
 test("social central alterna entre cortes e copies com pendências independentes", async ({ page }) => {
