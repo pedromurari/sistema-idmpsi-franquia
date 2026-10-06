@@ -340,13 +340,22 @@ test("social mídia separa menus e conteúdos da franqueadora e das unidades", a
   await expect(page.locator("aside").getByRole("link", { name: "Turmas" })).toHaveCount(0);
   await page.getByRole("button", { name: "Novo conteúdo" }).click();
   await page.getByLabel("Título *").fill("Corte da marca");
+  await expect(page.getByRole("button", { name: "Abrir link" })).toBeDisabled();
   await page.getByLabel("Data planejada").fill("2026-10-07");
   await page.getByLabel("Hora (Brasília)").fill("08:00");
   await page.getByLabel("Link do vídeo ou arte").fill("https://drive.google.com/file/d/exemplo/view");
+  await expect(page.getByRole("link", { name: "Abrir link" })).toHaveAttribute("href", "https://drive.google.com/file/d/exemplo/view");
+  await expect(page.getByRole("link", { name: "Abrir link" })).toHaveAttribute("target", "_blank");
   await page.getByLabel("Legenda").fill("Legenda revisada do conteúdo.");
   await page.getByLabel("Status", { exact: true }).selectOption("agendado");
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page.getByText("Corte da marca")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Abrir vídeo ou arte de Corte da marca" }))
+    .toHaveAttribute("href", "https://drive.google.com/file/d/exemplo/view");
+  await page.getByRole("button", { name: /Corte da marca/ }).click();
+  await expect(page.getByRole("dialog").getByRole("link", { name: "Abrir link" }))
+    .toHaveAttribute("href", "https://drive.google.com/file/d/exemplo/view");
+  await page.getByRole("button", { name: "Cancelar" }).click();
   await expect(page.getByText("Publicação manual no horário planejado")).toBeVisible();
   expect(dados.franquia_social_posts[0].escopo).toBe("franqueadora");
   expect(dados.franquia_social_posts[0].hora_publicacao).toBe("08:00");
@@ -359,8 +368,12 @@ test("social mídia separa menus e conteúdos da franqueadora e das unidades", a
   await expect(page.getByText("Corte da marca")).toHaveCount(0);
   await page.getByRole("button", { name: "Novo conteúdo" }).click();
   await page.getByLabel("Título *").fill("Corte da unidade");
+  await page.getByLabel("Link do vídeo ou arte").fill("https://drive.google.com/file/d/unidade/view");
+  await expect(page.getByRole("link", { name: "Abrir link" })).toHaveAttribute("href", "https://drive.google.com/file/d/unidade/view");
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page.getByText("Corte da unidade")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Abrir vídeo ou arte de Corte da unidade" }))
+    .toHaveAttribute("href", "https://drive.google.com/file/d/unidade/view");
   expect(dados.franquia_social_posts[1].escopo).toBe("unidade");
   expect(dados.franquia_social_posts[1].franquia_id).toBe("unidade-a");
 });

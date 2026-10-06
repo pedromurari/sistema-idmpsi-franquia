@@ -25,6 +25,13 @@ const vazio = (data?: string): Formulario => ({ titulo: "", legenda: "", tipo: "
   data_publicacao: data || hojeLocal(), hora_publicacao: null, media_url: null, observacoes: "" });
 const dataBR = (valor: string | null) => valor ? `${valor.slice(8, 10)}/${valor.slice(5, 7)}/${valor.slice(0, 4)}` : "Sem data";
 const classeCampo = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
+const linkSeguro = (valor: string | null | undefined) => {
+  if (!valor) return null;
+  try {
+    const url = new URL(valor.trim());
+    return url.protocol === "https:" ? url.href : null;
+  } catch { return null; }
+};
 
 export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const { user } = useAuth();
@@ -126,6 +133,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
       <p className="text-sm text-muted-foreground">Planeje os conteúdos e anúncios da rede.</p></div>
     {seletorQuadro}<CopiesAnuncios />
   </div>;
+  const urlFormulario = linkSeguro(form.media_url);
   const conteudo = (post: Post) => <Card key={post.id} className="p-3 space-y-2 hover:border-primary/40">
     <button className="w-full text-left" onClick={() => abrir(post)}>
       <p className="font-semibold text-sm line-clamp-2">{post.titulo}</p>
@@ -136,8 +144,11 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
         className="min-w-0 flex-1 rounded border bg-background p-1 text-xs">
         {SOCIAL_STATUS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
       </select>
-      {post.media_url && <a href={post.media_url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir mídia de ${post.titulo}`}><ExternalLink className="h-4 w-4 text-primary" /></a>}
     </div>
+    {linkSeguro(post.media_url) && <Button asChild variant="outline" size="sm" className="w-full text-xs">
+      <a href={linkSeguro(post.media_url)!} target="_blank" rel="noopener noreferrer" aria-label={`Abrir vídeo ou arte de ${post.titulo}`}>
+        <ExternalLink className="mr-1 h-3 w-3" /> Abrir vídeo/arte</a>
+    </Button>}
     {post.status === "agendado" && <p className="text-xs text-amber-700">Publicação manual no horário planejado</p>}
     {!post.media_url && <p className="text-xs text-amber-700">Arquivo/link pendente</p>}
   </Card>;
@@ -190,7 +201,13 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
             <div><Label htmlFor="social-hora">Hora (Brasília)</Label><Input id="social-hora" type="time" value={form.hora_publicacao?.slice(0, 5) ?? ""} onChange={(e) => setForm({ ...form, hora_publicacao: e.target.value || null })} /></div>
             <div><Label htmlFor="social-tipo">Tipo</Label><select id="social-tipo" className={classeCampo} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>{SOCIAL_TIPOS.map((tipo) => <option key={tipo.id} value={tipo.id}>{tipo.label}</option>)}</select></div></div>
           <div><Label htmlFor="social-status">Status</Label><select id="social-status" className={classeCampo} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>{SOCIAL_STATUS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
-          <div><Label htmlFor="social-midia-url">Link do vídeo ou arte</Label><Input id="social-midia-url" type="url" placeholder="https://drive.google.com/..." maxLength={2000} value={form.media_url ?? ""} onChange={(e) => setForm({ ...form, media_url: e.target.value })} /></div>
+          <div><Label htmlFor="social-midia-url">Link do vídeo ou arte</Label><div className="flex flex-wrap gap-2">
+            <Input id="social-midia-url" type="url" placeholder="https://drive.google.com/..." maxLength={2000}
+              className="min-w-0 flex-1" value={form.media_url ?? ""} onChange={(e) => setForm({ ...form, media_url: e.target.value })} />
+            {urlFormulario ? <Button asChild variant="outline"><a href={urlFormulario} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-1 h-4 w-4" /> Abrir link</a></Button>
+              : <Button type="button" variant="outline" disabled><ExternalLink className="mr-1 h-4 w-4" /> Abrir link</Button>}
+          </div></div>
           <div><Label htmlFor="social-legenda">Legenda</Label><textarea id="social-legenda" className={`${classeCampo} min-h-24`} maxLength={5000} value={form.legenda} onChange={(e) => setForm({ ...form, legenda: e.target.value })} /></div>
           <div><Label htmlFor="social-observacoes">Observações internas</Label><textarea id="social-observacoes" className={`${classeCampo} min-h-20`} maxLength={5000} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} /></div>
           <div className="flex justify-between gap-2 pt-2">{editando ? <Button type="button" variant="destructive" onClick={() => void excluir(editando)}><Trash2 className="mr-1 h-4 w-4" /> Excluir</Button> : <span />}
