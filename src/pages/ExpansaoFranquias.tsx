@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 type Lead = Database["public"]["Tables"]["franquia_expansao_leads"]["Row"];
 type Campanha = Database["public"]["Tables"]["franquia_expansao_campanhas"]["Row"];
 type Responsavel = Database["public"]["Tables"]["franquia_expansao_responsaveis"]["Row"];
+type Mensagem = Database["public"]["Tables"]["franquia_expansao_mensagens"]["Row"];
 const FASES = [
   { id: "novo", nome: "Novo", cor: "bg-blue-600" },
   { id: "contatado", nome: "Contatado", cor: "bg-amber-600" },
@@ -129,6 +130,49 @@ export default function ExpansaoFranquias() {
   </div>;
 }
 
+// Chat do WhatsApp conectado da franqueadora (idm-franquia-01) -- só faz
+// sentido aqui em Venda de Franquias, nunca no funil de aluno por unidade
+// (ver nota em HistoricoLead.tsx).
+function ChatWhatsAppExpansao({ lead }: { lead: Lead }) {
+  const client = useQueryClient();
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const mensagens = useQuery({
+    queryKey: ["expansao-whatsapp", lead.id],
+    queryFn: async ({ signal }) => todasPaginas<Mensagem>((de, ate) => supabase.from("franquia_expansao_mensagens").select("*")
+      .eq("lead_id", lead.id).order("created_at", { ascending: true }).order("id").range(de, ate).abortSignal(signal)),
+    refetchInterval: 6000, // sem realtime por ora -- poll simples enquanto o diálogo está aberto
+  });
+
+  async function enviar(event: FormEvent) {
+    event.preventDefault();
+    const mensagem = texto.trim();
+    if (!mensagem || enviando) return;
+    setEnviando(true);
+    const { error } = await supabase.functions.invoke("franquia-whatsapp-enviar", { body: { leadId: lead.id, texto: mensagem } });
+    setEnviando(false);
+    if (error) { toast.error("Não foi possível enviar pelo WhatsApp agora."); return; }
+    setTexto("");
+    await client.invalidateQueries({ queryKey: ["expansao-whatsapp", lead.id] });
+  }
+
+  return <div className="space-y-2">
+    <div className="max-h-56 overflow-y-auto space-y-1.5 rounded-md border bg-muted/30 p-2">
+      {mensagens.isPending && <Loader2 aria-label="Carregando conversa" className="h-4 w-4 animate-spin" />}
+      {mensagens.data?.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mensagem ainda.</p>}
+      {mensagens.data?.map((m) => <div key={m.id} className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-sm ${m.direcao === "enviada" ? "ml-auto bg-primary/15" : "bg-background border"}`}>
+        <p className="whitespace-pre-wrap break-words">{m.conteudo}</p>
+        <time className="block text-[10px] text-muted-foreground mt-0.5">{new Date(m.created_at).toLocaleString("pt-BR")}</time>
+      </div>)}
+    </div>
+    <form onSubmit={(event) => void enviar(event)} className="flex gap-2">
+      <Input aria-label="Mensagem de WhatsApp" placeholder="Escreva uma mensagem..." value={texto}
+        maxLength={4096} onChange={(event) => setTexto(event.target.value)} disabled={enviando} />
+      <Button type="submit" size="sm" disabled={enviando || !texto.trim()}>{enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}</Button>
+    </form>
+  </div>;
+}
+
 function LeadDialog({ lead, responsaveis, fechar }: { lead: Lead | null; responsaveis: Responsavel[]; fechar: () => void }) {
   const client = useQueryClient();
   const { user } = useAuth();
@@ -169,6 +213,7 @@ function LeadDialog({ lead, responsaveis, fechar }: { lead: Lead | null; respons
   return <Dialog open onOpenChange={(open) => { if (!open && !salvando) fechar(); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{lead ? "Editar interessado" : "Novo interessado"}</DialogTitle>
     <DialogDescription>Lead para compra de franquia. Estes contatos são visíveis somente à administração.
       {lead && <span className="block mt-1">Entrada: {dataHoraLead(lead.created_at)} (Brasília)</span>}</DialogDescription></DialogHeader>
+    {lead?.whatsapp && <div className="space-y-2"><h3 className="font-semibold text-sm">WhatsApp</h3><ChatWhatsAppExpansao lead={lead} /></div>}
     <form onSubmit={(e) => void salvar(e)} className="space-y-4"><fieldset disabled={salvando} className="space-y-4"><div className="grid gap-3 sm:grid-cols-2">
       <Campo id="exp-nome" label="Nome *"><Input id="exp-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={160} required /></Campo>
       <Campo id="exp-whatsapp" label="WhatsApp"><Input id="exp-whatsapp" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} /></Campo>

@@ -340,6 +340,44 @@ export type Database = {
           },
         ]
       }
+      franquia_expansao_mensagens: {
+        Row: {
+          conteudo: string
+          created_at: string
+          direcao: string
+          evolution_message_id: string | null
+          id: string
+          lead_id: string
+          remetente: string | null
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string
+          direcao: string
+          evolution_message_id?: string | null
+          id?: string
+          lead_id: string
+          remetente?: string | null
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          direcao?: string
+          evolution_message_id?: string | null
+          id?: string
+          lead_id?: string
+          remetente?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_expansao_mensagens_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "franquia_expansao_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquia_expansao_responsaveis: {
         Row: {
           ativo: boolean
@@ -446,47 +484,6 @@ export type Database = {
             columns: ["franquia_id", "turma_id"]
             isOneToOne: false
             referencedRelation: "franquia_turmas"
-            referencedColumns: ["franquia_id", "id"]
-          },
-        ]
-      }
-      franquia_lead_mensagens: {
-        Row: {
-          conteudo: string
-          created_at: string
-          direcao: string
-          evolution_message_id: string | null
-          franquia_id: string
-          id: string
-          lead_id: string
-          remetente: string | null
-        }
-        Insert: {
-          conteudo: string
-          created_at?: string
-          direcao: string
-          evolution_message_id?: string | null
-          franquia_id: string
-          id?: string
-          lead_id: string
-          remetente?: string | null
-        }
-        Update: {
-          conteudo?: string
-          created_at?: string
-          direcao?: string
-          evolution_message_id?: string | null
-          franquia_id?: string
-          id?: string
-          lead_id?: string
-          remetente?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "franquia_lead_mensagens_franquia_id_lead_id_fkey"
-            columns: ["franquia_id", "lead_id"]
-            isOneToOne: false
-            referencedRelation: "franquia_leads"
             referencedColumns: ["franquia_id", "id"]
           },
         ]

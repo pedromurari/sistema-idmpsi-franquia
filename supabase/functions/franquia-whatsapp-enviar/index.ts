@@ -44,26 +44,27 @@ Deno.serve(async (req) => {
   const texto = entrada.texto?.trim();
   if (!leadId || !texto || texto.length > 4096) return resposta(400, { mensagem: "Informe leadId e texto (até 4096 caracteres)." });
 
-  // Cliente com o JWT de quem chamou -- a RLS de franquia_leads decide se
-  // essa pessoa pode ver esse lead (mesma regra usada no resto do app).
+  // Cliente com o JWT de quem chamou -- a RLS de franquia_expansao_leads só
+  // libera pra franqueador (é infraestrutura da franqueadora, nunca de uma
+  // unidade -- ver franquia-whatsapp-status pro mesmo princípio).
   const comoUsuario = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: authHeader } },
   });
   const { data: lead, error: leadError } = await comoUsuario
-    .from("franquia_leads")
-    .select("id, franquia_id, telefone")
+    .from("franquia_expansao_leads")
+    .select("id, whatsapp")
     .eq("id", leadId)
     .maybeSingle();
 
   if (leadError) { console.error("Falha ao validar acesso ao lead", leadError.code); return resposta(503, { mensagem: "Não foi possível enviar agora." }); }
   if (!lead) return resposta(404, { mensagem: "Lead não encontrado ou sem acesso." });
-  if (!lead.telefone) return resposta(422, { mensagem: "Esse lead não tem telefone cadastrado." });
+  if (!lead.whatsapp) return resposta(422, { mensagem: "Esse lead não tem WhatsApp cadastrado." });
 
   const { data: userData } = await comoUsuario.auth.getUser();
   const remetente = userData?.user?.id ?? null;
 
-  const digitos = lead.telefone.replace(/\D/g, "");
+  const digitos = lead.whatsapp.replace(/\D/g, "");
   const numero = digitos.length === 10 || digitos.length === 11 ? `55${digitos}` : digitos;
 
   const envioResp = await fetch(`${evolutionUrl}/message/sendText/${evolutionInstance}`, {
@@ -79,8 +80,7 @@ Deno.serve(async (req) => {
   const evolutionMessageId: string | null = envioJson?.key?.id ?? null;
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error: insertError } = await admin.from("franquia_lead_mensagens").insert({
-    franquia_id: lead.franquia_id,
+  const { error: insertError } = await admin.from("franquia_expansao_mensagens").insert({
     lead_id: lead.id,
     direcao: "enviada",
     conteudo: texto,

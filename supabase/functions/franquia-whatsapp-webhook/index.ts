@@ -52,13 +52,12 @@ Deno.serve(async (req) => {
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
-  // Mesmo número pode, em tese, existir em mais de uma unidade (cada
-  // franquia_leads é isolado por franquia_id) -- pega o lead mais recente
-  // como critério de desempate; caso raro, documentado.
+  // Instância é só da franqueadora -- procura em franquia_expansao_leads
+  // (venda de franquia), nunca em franquia_leads (aluno de unidade).
   const { data: lead, error: leadError } = await admin
-    .from("franquia_leads")
-    .select("id, franquia_id")
-    .ilike("telefone", `%${digitos.slice(-8)}%`)
+    .from("franquia_expansao_leads")
+    .select("id")
+    .ilike("whatsapp", `%${digitos.slice(-8)}%`)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -67,10 +66,9 @@ Deno.serve(async (req) => {
     console.error("Falha ao buscar lead pelo telefone", leadError.code);
     return resposta(503, { mensagem: "Não foi possível processar agora." });
   }
-  if (!lead) return resposta(200, { mensagem: "Nenhum lead encontrado para esse número, ignorado." });
+  if (!lead) return resposta(200, { mensagem: "Nenhum lead de expansão encontrado para esse número, ignorado." });
 
-  const { error: insertError } = await admin.from("franquia_lead_mensagens").insert({
-    franquia_id: lead.franquia_id,
+  const { error: insertError } = await admin.from("franquia_expansao_mensagens").insert({
     lead_id: lead.id,
     direcao: fromMe ? "enviada" : "recebida",
     conteudo: texto,
