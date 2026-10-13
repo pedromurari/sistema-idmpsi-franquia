@@ -1,7 +1,7 @@
-import { Building2, Calculator, FileText, GraduationCap, LayoutDashboard, Megaphone, MessageSquarePlus, TrendingUp, UsersRound } from "lucide-react";
+import { Building2, Calculator, FileText, GraduationCap, LayoutDashboard, Megaphone, MessageCircle, MessageSquarePlus, TrendingUp, UsersRound } from "lucide-react";
 import type { FranquiaRole } from "@/contexts/AuthContext";
 
-export const rotaFranqueadora = (path: string) => ["/rede", "/unidades", "/expansao", "/social-franqueadora", "/sugestoes"].includes(path);
+export const rotaFranqueadora = (path: string) => ["/rede", "/unidades", "/expansao", "/social-franqueadora", "/sugestoes", "/whatsapp"].includes(path);
 
 export function navGroups(role: FranquiaRole, unidadeNome?: string | null) {
   const unidade = [
@@ -20,6 +20,7 @@ export function navGroups(role: FranquiaRole, unidadeNome?: string | null) {
       { to: "/expansao", label: "Venda de franquias", icon: TrendingUp },
       { to: "/social-franqueadora", label: "Social mídia central", icon: Megaphone },
       { to: "/sugestoes", label: "Sugestões da equipe", icon: MessageSquarePlus },
+      { to: "/whatsapp", label: "WhatsApp da rede", icon: MessageCircle },
     ] },
     ...(unidadeNome ? [{ titulo: `Unidade: ${unidadeNome}`, itens: unidade }] : []),
   ];

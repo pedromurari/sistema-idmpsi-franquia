@@ -16,6 +16,7 @@ import ExpansaoFranquias from '@/pages/ExpansaoFranquias';
 import CapturaFranquia from '@/pages/CapturaFranquia';
 import SocialMidia from '@/pages/SocialMidia';
 import Sugestoes from '@/pages/Sugestoes';
+import WhatsAppConexao from '@/pages/WhatsAppConexao';
 import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ function AppRoutes() {
       <Route path="/expansao" element={<ProtectedRoute somenteFranqueador><ExpansaoFranquias /></ProtectedRoute>} />
       <Route path="/social-franqueadora" element={<ProtectedRoute somenteFranqueador><SocialMidia escopo="franqueadora" /></ProtectedRoute>} />
       <Route path="/sugestoes" element={<ProtectedRoute somenteFranqueador><Sugestoes /></ProtectedRoute>} />
+      <Route path="/whatsapp" element={<ProtectedRoute somenteFranqueador><WhatsAppConexao /></ProtectedRoute>} />
       <Route path="/social-unidade" element={<ProtectedRoute><SocialMidia escopo="unidade" /></ProtectedRoute>} />
       <Route path="/notas" element={<ProtectedRoute><NotasFiscais /></ProtectedRoute>} />
       <Route path="*" element={<HomeRedirect />} />
