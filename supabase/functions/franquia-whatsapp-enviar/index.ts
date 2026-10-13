@@ -10,10 +10,22 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL");
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+// Mesma lógica de CORS do franquia-whatsapp-status -- sem isso o navegador
+// bloqueia a resposta e o erro real nunca chega na tela.
+const origensPermitidas = ["https://sistema.idmpsifranquia.com", "http://localhost:8090"];
+
 Deno.serve(async (req) => {
-  const cabecalhos = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
+  const origin = req.headers.get("origin") ?? "";
+  const origemOk = origensPermitidas.includes(origin);
+  const cabecalhos = {
+    "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": origemOk ? origin : origensPermitidas[0],
+    "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
+    "Access-Control-Allow-Methods": "POST, OPTIONS", "Vary": "Origin",
+  };
   const resposta = (status: number, corpo: Record<string, unknown>) => new Response(JSON.stringify(corpo), { status, headers: cabecalhos });
 
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cabecalhos });
   if (req.method !== "POST") return resposta(405, { mensagem: "Método não permitido." });
   if (!evolutionUrl || !evolutionInstance || !evolutionApiKey || !supabaseUrl || !anonKey || !serviceRoleKey) {
     return resposta(503, { mensagem: "Indisponível." });

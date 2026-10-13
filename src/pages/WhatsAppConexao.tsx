@@ -14,11 +14,25 @@ export default function WhatsAppConexao() {
   const [estado, setEstado] = useState<Estado>("carregando");
   const [qrcode, setQrcode] = useState<string | null>(null);
   const [acionando, setAcionando] = useState(false);
+  const [erroDetalhe, setErroDetalhe] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function consultar(acao: "status" | "conectar") {
     const { data, error } = await supabase.functions.invoke<{ estado: Estado; qrcode: string | null }>("franquia-whatsapp-status", { body: { acao } });
-    if (error) { setEstado("erro"); return; }
+    if (error) {
+      // supabase-js só dá um erro genérico em error.message -- a mensagem de
+      // verdade (ex: "só o franqueador pode...") vem no corpo da resposta.
+      let detalhe = error.message;
+      const contexto = (error as { context?: Response }).context;
+      if (contexto) {
+        try { detalhe = (await contexto.clone().json())?.mensagem ?? detalhe; } catch { /* corpo não era JSON */ }
+      }
+      console.error("Falha ao consultar status do WhatsApp:", detalhe);
+      setErroDetalhe(detalhe);
+      setEstado("erro");
+      return;
+    }
+    setErroDetalhe(null);
     setEstado(data?.estado ?? "desconhecido");
     setQrcode(data?.qrcode ?? null);
   }
@@ -60,7 +74,7 @@ export default function WhatsAppConexao() {
 
         {estado === "erro" && (
           <>
-            <p className="text-sm text-destructive">Não foi possível falar com o servidor de WhatsApp agora.</p>
+            <p className="text-sm text-destructive">{erroDetalhe || "Não foi possível falar com o servidor de WhatsApp agora."}</p>
             <Button variant="outline" size="sm" onClick={() => void consultar("status")}><RefreshCw className="h-4 w-4 mr-2" />Tentar de novo</Button>
           </>
         )}
