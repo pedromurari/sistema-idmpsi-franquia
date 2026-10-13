@@ -2,3 +2,8 @@ project_id = "sistema-idmpsi-franquia"
 
 [functions.captura-franquia]
 verify_jwt = false
+
+# Webhook da Evolution API -- não manda JWT do Supabase, a autenticação é o
+# segredo compartilhado na própria URL (?secret=), validado dentro da função.
+[functions.franquia-whatsapp-webhook]
+verify_jwt = false

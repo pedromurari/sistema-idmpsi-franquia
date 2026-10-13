@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { MessageSquarePlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { areaDaRota, rotaLimpa, tipos, type TipoSugestao } from "@/lib/sugestoes";
 import { Campo, selectClass } from "@/components/financeiro/Shared";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
 // a pessoa precisar explicar onde estava.
 export function FeedbackBox() {
   const location = useLocation();
+  const { user } = useAuth();
   const client = useQueryClient();
   const [aberto, setAberto] = useState(false);
   const [tipo, setTipo] = useState<TipoSugestao>("melhoria");
@@ -38,9 +40,15 @@ export function FeedbackBox() {
     event.preventDefault();
     if (enviando) return;
     if (texto.trim().length < 3) return setErro("Escreva pelo menos algumas palavras.");
+    if (!user) return setErro("Sessão expirada, recarregue a página.");
     setEnviando(true);
     setErro("");
+    // autor_id/autor_nome são sobrescritos por um trigger no banco (nunca
+    // confia no que o navegador manda) -- mandamos aqui só pra satisfazer o
+    // tipo gerado, que não sabe que o trigger preenche sozinho.
     const { error } = await supabase.from("franquia_sugestoes").insert({
+      autor_id: user.id,
+      autor_nome: user.nome,
       rota: rotaLimpa(location.pathname),
       area,
       tipo,

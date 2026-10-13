@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       franquia_audit_log: {
@@ -425,6 +450,47 @@ export type Database = {
           },
         ]
       }
+      franquia_lead_mensagens: {
+        Row: {
+          conteudo: string
+          created_at: string
+          direcao: string
+          evolution_message_id: string | null
+          franquia_id: string
+          id: string
+          lead_id: string
+          remetente: string | null
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string
+          direcao: string
+          evolution_message_id?: string | null
+          franquia_id: string
+          id?: string
+          lead_id: string
+          remetente?: string | null
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          direcao?: string
+          evolution_message_id?: string | null
+          franquia_id?: string
+          id?: string
+          lead_id?: string
+          remetente?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_lead_mensagens_franquia_id_lead_id_fkey"
+            columns: ["franquia_id", "lead_id"]
+            isOneToOne: false
+            referencedRelation: "franquia_leads"
+            referencedColumns: ["franquia_id", "id"]
+          },
+        ]
+      }
       franquia_leads: {
         Row: {
           bolsa_percentual: number
@@ -686,45 +752,45 @@ export type Database = {
       }
       franquia_social_copies: {
         Row: {
-          id: string
-          titulo: string
           briefing: string
-          texto_anuncio: string
           chamada_acao: string
-          referencia_url: string | null
-          prazo: string | null
-          status: string
-          observacoes: string
-          criado_por: string
           created_at: string
+          criado_por: string
+          id: string
+          observacoes: string
+          prazo: string | null
+          referencia_url: string | null
+          status: string
+          texto_anuncio: string
+          titulo: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          titulo: string
           briefing?: string
-          texto_anuncio?: string
           chamada_acao?: string
-          referencia_url?: string | null
-          prazo?: string | null
-          status?: string
-          observacoes?: string
-          criado_por?: string
           created_at?: string
+          criado_por?: string
+          id?: string
+          observacoes?: string
+          prazo?: string | null
+          referencia_url?: string | null
+          status?: string
+          texto_anuncio?: string
+          titulo: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          titulo?: string
           briefing?: string
-          texto_anuncio?: string
           chamada_acao?: string
-          referencia_url?: string | null
-          prazo?: string | null
-          status?: string
-          observacoes?: string
-          criado_por?: string
           created_at?: string
+          criado_por?: string
+          id?: string
+          observacoes?: string
+          prazo?: string | null
+          referencia_url?: string | null
+          status?: string
+          texto_anuncio?: string
+          titulo?: string
           updated_at?: string
         }
         Relationships: []
@@ -804,9 +870,8 @@ export type Database = {
         }
         Insert: {
           area: string
-          // O trigger BEFORE INSERT preenche autor e nome; o navegador não tem GRANT nessas colunas.
-          autor_id?: string
-          autor_nome?: string
+          autor_id: string
+          autor_nome: string
           created_at?: string
           id?: string
           resposta?: string | null
@@ -1075,6 +1140,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

@@ -13,11 +13,53 @@ import { todasPaginas } from "@/lib/financeiro";
 
 type Atividade = Database["public"]["Tables"]["franquia_lead_atividades"]["Row"];
 type Etapa = Database["public"]["Tables"]["franquia_lead_etapas"]["Row"];
+type Mensagem = Database["public"]["Tables"]["franquia_lead_mensagens"]["Row"];
 
 function whatsapp(telefone: string | null) {
   const digitos = telefone?.replace(/\D/g, "") ?? "";
   if (digitos.length < 8 || digitos.length > 15) return null;
   return `https://wa.me/${digitos.length === 10 || digitos.length === 11 ? `55${digitos}` : digitos}`;
+}
+
+function ChatWhatsApp({ lead }: { lead: Lead }) {
+  const client = useQueryClient();
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const mensagens = useQuery({
+    queryKey: ["comercial-whatsapp", lead.franquia_id, lead.id],
+    queryFn: async ({ signal }) => todasPaginas<Mensagem>((de, ate) => supabase.from("franquia_lead_mensagens").select("*")
+      .eq("franquia_id", lead.franquia_id).eq("lead_id", lead.id)
+      .order("created_at", { ascending: true }).order("id").range(de, ate).abortSignal(signal)),
+    refetchInterval: 6000, // sem realtime por ora -- poll simples enquanto o diálogo está aberto
+  });
+
+  async function enviar(event: FormEvent) {
+    event.preventDefault();
+    const mensagem = texto.trim();
+    if (!mensagem || enviando) return;
+    setEnviando(true);
+    const { error } = await supabase.functions.invoke("franquia-whatsapp-enviar", { body: { leadId: lead.id, texto: mensagem } });
+    setEnviando(false);
+    if (error) { toast.error("Não foi possível enviar pelo WhatsApp agora."); return; }
+    setTexto("");
+    await client.invalidateQueries({ queryKey: ["comercial-whatsapp", lead.franquia_id, lead.id] });
+  }
+
+  return <div className="space-y-2">
+    <div className="max-h-56 overflow-y-auto space-y-1.5 rounded-md border bg-muted/30 p-2">
+      {mensagens.isPending && <Loader2 aria-label="Carregando conversa" className="h-4 w-4 animate-spin" />}
+      {mensagens.data?.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mensagem ainda.</p>}
+      {mensagens.data?.map((m) => <div key={m.id} className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-sm ${m.direcao === "enviada" ? "ml-auto bg-primary/15" : "bg-background border"}`}>
+        <p className="whitespace-pre-wrap break-words">{m.conteudo}</p>
+        <time className="block text-[10px] text-muted-foreground mt-0.5">{new Date(m.created_at).toLocaleString("pt-BR")}</time>
+      </div>)}
+    </div>
+    <form onSubmit={(event) => void enviar(event)} className="flex gap-2">
+      <Input aria-label="Mensagem de WhatsApp" placeholder="Escreva uma mensagem..." value={texto}
+        maxLength={4096} onChange={(event) => setTexto(event.target.value)} disabled={enviando} />
+      <Button type="submit" size="sm" disabled={enviando || !texto.trim()}>{enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}</Button>
+    </form>
+  </div>;
 }
 
 export function HistoricoLead({ lead, fechar }: { lead: Lead; fechar: () => void }) {
@@ -74,7 +116,11 @@ export function HistoricoLead({ lead, fechar }: { lead: Lead; fechar: () => void
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
       <DialogHeader><DialogTitle>Histórico de {lead.nome}</DialogTitle>
         <DialogDescription>Registre contatos e notas. O histórico fica preservado para a equipe da unidade.</DialogDescription></DialogHeader>
-      {link && <Button asChild variant="outline"><a href={link} target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a></Button>}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">WhatsApp</h3>
+          {link && <a href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground underline underline-offset-2">abrir no app</a>}</div>
+        <ChatWhatsApp lead={lead} />
+      </div>
       <form onSubmit={(event) => void salvar(event)} className="space-y-3">
         <div className="flex gap-2"><Button type="button" size="sm" variant={tipo === "ligacao" ? "default" : "outline"} onClick={() => setTipo("ligacao")}>Ligação</Button>
           <Button type="button" size="sm" variant={tipo === "nota" ? "default" : "outline"} onClick={() => setTipo("nota")}>Nota</Button></div>
