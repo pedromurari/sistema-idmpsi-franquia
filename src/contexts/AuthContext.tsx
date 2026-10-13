@@ -17,9 +17,17 @@ export interface AppUser {
   ativo: boolean;
 }
 
+// 'checking' logo após o login; 'enroll' = sem fator TOTP verificado ainda
+// (acesso a dado fiscal de terceiro exige 2FA, não é opcional); 'challenge' =
+// já tem fator verificado mas essa sessão ainda não confirmou o código;
+// 'satisfied' = aal2 alcançado, libera o app.
+export type MfaStatus = 'checking' | 'enroll' | 'challenge' | 'satisfied';
+
 interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
+  mfaStatus: MfaStatus;
+  refreshMfaStatus: () => Promise<void>;
   login: (email: string, senha: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
@@ -30,6 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mfaStatus, setMfaStatus] = useState<MfaStatus>('checking');
+
+  const refreshMfaStatus = async () => {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !data) { setMfaStatus('enroll'); return; }
+    if (data.nextLevel !== 'aal2') { setMfaStatus('enroll'); return; }
+    setMfaStatus(data.currentLevel === 'aal2' ? 'satisfied' : 'challenge');
+  };
 
   const carregarUsuario = async (authUser: User): Promise<AppUser | null> => {
     const [{ data: profile, error: profileError }, { data: roleData, error: roleError }] = await Promise.all([
@@ -65,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let ativo = true;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       const atual = ++geracao;
-      if (event === 'SIGNED_OUT') queryClient.clear();
+      if (event === 'SIGNED_OUT') { queryClient.clear(); setMfaStatus('checking'); }
       if (newSession?.user) {
         // setTimeout(0) evita deadlock entre o callback do onAuthStateChange e
         // chamadas supabase feitas dentro dele (recomendação oficial do supabase-js).
@@ -74,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           carregarUsuario(newSession.user).then((u) => {
             if (!ativo || atual !== geracao) return;
             setUser(u); setLoading(false);
+            if (u) refreshMfaStatus();
           }).catch(() => {
             if (!ativo || atual !== geracao) return;
             setUser(null); setLoading(false);
@@ -101,10 +118,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setMfaStatus('checking');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, mfaStatus, refreshMfaStatus, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

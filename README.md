@@ -65,8 +65,11 @@ terceiros (franqueados), não só dado interno da Onze Digital.
    (status `pendente`). A emissão de verdade (integração com prefeitura/NFS-e
    ou um emissor terceiro) precisa virar uma **edge function** com
    `service_role`, nunca algo que o navegador do franqueado chama direto.
-5. **2FA** pros logins de franqueado/franqueador, dado que é acesso a dado
-   fiscal de terceiro — o Supabase Auth suporta isso nativamente (MFA).
+5. ~~**2FA** pros logins de franqueado/franqueador~~ — **implementado em
+   13/10/2026**: TOTP obrigatório (sem opção de pular) via `supabase.auth.mfa`,
+   gate em `MfaGate.tsx` dentro do `ProtectedRoute`. Primeiro login depois da
+   mudança força o cadastro (QR code); logins seguintes pedem o código de
+   6 dígitos até fechar aal2 na sessão.
 6. Deploy: o projeto próprio na Vercel já existe em
    `https://sistema.idmpsifranquia.com`. As telas de expansão e comercial foram
    publicadas em 02/10/2026; a captura pública usa uma Edge Function no

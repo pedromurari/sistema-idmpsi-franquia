@@ -5,13 +5,14 @@ import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LogoChip } from '@/components/LogoChip';
-import { LogOut, Sun, Moon, Building2 } from 'lucide-react';
+import { ProfileMenu } from '@/components/ProfileMenu';
+import { Sun, Moon, Building2 } from 'lucide-react';
 import { rotaFranqueadora } from './navGroups';
 
 const VISAO_GERAL = '__geral__';
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { unidades, viewAsId, setViewAsId } = useViewAs();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
@@ -48,16 +49,10 @@ export function Header() {
             </Select>
           </div>
         )}
-        <div className="text-right hidden sm:block">
-          <p className="text-sm font-medium leading-tight">{user?.nome}</p>
-          <p className="text-xs text-muted-foreground leading-tight">{user?.role === 'franqueador' ? 'Franqueador' : 'Franqueado'}</p>
-        </div>
         <Button variant="ghost" size="icon" onClick={toggle} title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        <Button variant="ghost" size="icon" onClick={logout} title="Sair">
-          <LogOut className="h-4 w-4" />
-        </Button>
+        <ProfileMenu />
       </div>
     </header>
   );

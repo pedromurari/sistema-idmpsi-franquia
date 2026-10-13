@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ViewAsProvider, useViewAs } from '@/contexts/ViewAsContext';
 import { Layout } from '@/components/Layout';
 import Login from '@/pages/Login';
+import MfaGate from '@/pages/MfaGate';
 import Dashboard from '@/pages/Dashboard';
 import DreUnidade from '@/pages/DreUnidade';
 import NotasFiscais from '@/pages/NotasFiscais';
@@ -20,12 +21,19 @@ import { Loader2 } from 'lucide-react';
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, somenteFranqueador = false }: { children: React.ReactNode; somenteFranqueador?: boolean }) {
-  const { user, loading } = useAuth();
+  const { user, loading, mfaStatus } = useAuth();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
   if (!user) return <Navigate to="/login" replace />;
+  // 2FA é obrigatório neste portal (dado fiscal/financeiro de terceiro) --
+  // enquanto não satisfeito, nenhuma rota protegida renderiza, mesmo com
+  // sessão válida.
+  if (mfaStatus === 'checking') {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (mfaStatus !== 'satisfied') return <MfaGate />;
   if (somenteFranqueador && user.role !== 'franqueador') return <Navigate to="/dashboard" replace />;
   return <Layout>{children}</Layout>;
 }
