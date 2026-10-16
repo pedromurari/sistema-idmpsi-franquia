@@ -13,12 +13,12 @@ const unidadeB = "10000000-0000-0000-0000-000000000002";
 const turmaA = "20000000-0000-0000-0000-000000000001";
 const turmaB = "20000000-0000-0000-0000-000000000002";
 const legado = "30000000-0000-0000-0000-000000000001";
-async function como(id, query, params = []) {
-  await db.exec(`set role authenticated; set request.jwt.claim.sub = '${id}';`);
+async function como(id, query, params = [], aal = 'aal2') {
+  await db.exec(`set role authenticated; set request.jwt.claim.sub = '${id}'; set request.jwt.claim.aal = '${aal}';`);
   try {
     return await db.query(query, params);
   } finally {
-    await db.exec("reset role; reset request.jwt.claim.sub;");
+    await db.exec("reset role; reset request.jwt.claim.sub; reset request.jwt.claim.aal;");
   }
 }
 before(async () => {
@@ -26,8 +26,10 @@ before(async () => {
     create role service_role nologin bypassrls;
     create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('sub', current_setting('request.jwt.claim.sub', true), 'aal', current_setting('request.jwt.claim.aal', true)) $$;
     grant usage on schema auth to authenticated, anon;
-    grant execute on function auth.uid() to authenticated, anon;`);
+    grant execute on function auth.uid() to authenticated, anon;
+    grant execute on function auth.jwt() to authenticated, anon;`);
   await db.exec(`alter default privileges for role postgres in schema public
     grant truncate, references, trigger on tables to authenticated, anon;`);
   for (const file of ["0001_init_franquias.sql", "0002_grants.sql"])
@@ -712,4 +714,38 @@ test("copies de anúncios ficam isoladas para a franqueadora e auditadas", async
   assert.deepEqual(trilha, ["insert", "update"]);
   await assert.rejects(como(admin,
     "delete from franquia_social_copies where id=$1", [criado.id]), /permission denied/);
+});
+
+test("JWT aal1 só lê o próprio perfil para configurar MFA; aal2 mantém escopo das unidades", async () => {
+  for (const file of ["0015_whatsapp_lead.sql", "0016_whatsapp_expansao.sql", "0017_exigir_mfa_no_banco.sql"])
+    await db.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), "utf8"));
+
+  const tabelas = (await db.query(`select c.relname from pg_class c
+    join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relkind='r' and c.relrowsecurity
+    and c.relname not in ('franquia_profiles','franquia_user_roles')`)).rows.map((r) => r.relname);
+  const protegidas = (await db.query(`select tablename from pg_policies
+    where schemaname='public' and policyname='exige mfa aal2' and permissive='RESTRICTIVE'`)).rows.map((r) => r.tablename);
+  assert.deepEqual(protegidas.sort(), tabelas.sort());
+
+  assert.equal((await como(admin, "select id from franquia_profiles", [], 'aal1')).rows.length, 1);
+  assert.equal((await como(admin, "select user_id from franquia_user_roles", [], 'aal1')).rows.length, 1);
+  assert.equal((await como(admin, "select franquia_is_franqueador() as ok", [], 'aal1')).rows[0].ok, false);
+  assert.equal((await como(alunoA, "select franquia_minha_unidade() as id", [], 'aal1')).rows[0].id, null);
+  assert.equal((await como(alunoA, "select franquia_usuario_ativo() as ok", [], 'aal1')).rows[0].ok, false);
+  for (const table of ['franquias', 'franquia_dre_lancamentos', 'franquia_leads',
+    'franquia_social_posts', 'franquia_sugestoes', 'franquia_expansao_leads',
+    'franquia_expansao_mensagens']) {
+    assert.equal((await como(admin, `select count(*)::int as n from ${table}`, [], 'aal1')).rows[0].n, 0, table);
+  }
+  assert.equal((await como(admin, "update franquias set nome='Bloqueada' where id=$1", [unidadeA], 'aal1')).affectedRows, 0);
+  await assert.rejects(como(admin,
+    "insert into franquia_social_copies(titulo) values ('Bloqueada')", [], 'aal1'), /row-level security/);
+  await assert.rejects(como(alunoA,
+    "insert into franquia_sugestoes(rota,area,texto) values ('/dre','Financeiro','Bloqueada')", [], 'aal1'), /row-level security/);
+  assert.equal((await como(admin, "select franquia_is_franqueador() as ok")).rows[0].ok, true);
+  assert.equal((await como(alunoA, "select franquia_minha_unidade() as id")).rows[0].id, unidadeA);
+  assert.equal((await como(alunoA, "select id from franquias")).rows.length, 1);
+  assert.equal((await como(alunoB, "select id from franquias")).rows.length, 1);
+  assert.equal((await como(admin, "select id from franquias")).rows.length, 2);
 });

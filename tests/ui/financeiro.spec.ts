@@ -1,9 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 
+const navegar = (page: Page, rota: string) => page.goto(rota, { waitUntil: "domcontentloaded" });
+
 // Contrato HTTP simulado para testar UI. RLS e SQL reais são testados separadamente no PGlite.
 async function preparar(
   page: Page,
   role: "franqueador" | "franqueado" = "franqueador",
+  aal: "aal1" | "aal2" = "aal2",
 ) {
   const userId = role === "franqueador" ? "admin" : "franqueado-a";
   const timestamp = "2026-01-01T12:00:00.000Z";
@@ -157,11 +160,17 @@ async function preparar(
     });
   });
   await page.addInitScript(
-    ({ userId }) => {
+    ({ userId, aal }) => {
+      const base64url = (value: object) => btoa(JSON.stringify(value))
+        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
       localStorage.setItem(
         "sb-portal-test-auth-token",
         JSON.stringify({
-          access_token: "token-ficticio-de-teste",
+          access_token: [
+            base64url({ alg: "HS256", typ: "JWT" }),
+            base64url({ sub: userId, role: "authenticated", aal, amr: aal === "aal2" ? [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] : [{ method: "password", timestamp: Math.floor(Date.now() / 1000) }], exp: Math.floor(Date.now() / 1000) + 3600 }),
+            "assinatura-de-teste",
+          ].join("."),
           refresh_token: "refresh-ficticio",
           token_type: "bearer",
           expires_in: 3600,
@@ -173,15 +182,23 @@ async function preparar(
             role: "authenticated",
             app_metadata: {},
             user_metadata: {},
+            factors: [{ id: "totp-teste", factor_type: "totp", status: "verified" }],
             created_at: "2026-01-01T00:00:00Z",
           },
         }),
       );
     },
-    { userId },
+    { userId, aal },
   );
   return dados;
 }
+
+test("sessão sem segundo fator vê desafio e não acessa o dashboard", async ({ page }) => {
+  await preparar(page, "franqueado", "aal1");
+  await navegar(page, "/comercial");
+  await expect(page.getByRole("heading", { name: "Confirme sua identidade" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Comercial e captação" })).toHaveCount(0);
+});
 
 async function selecionarUnidade(page: Page, nome = "Unidade Alfa") {
   await page.getByRole("combobox").first().click();
@@ -193,7 +210,7 @@ async function selecionarUnidade(page: Page, nome = "Unidade Alfa") {
 
 test("ADM alterna claramente entre rede e operação de uma unidade", async ({ page }) => {
   await preparar(page);
-  await page.goto("/");
+  await navegar(page, "/");
   await expect(page).toHaveURL(/\/rede$/);
   await expect(page.getByRole("heading", { name: "Dashboard — Rede IDM PSI" })).toBeVisible();
   await expect(page.locator("aside").getByRole("link", { name: "Financeiro" })).toHaveCount(0);
@@ -210,7 +227,7 @@ test("franqueado cadastra lead da própria unidade, avança etapa e exige motivo
   const erros: string[] = [];
   page.on("pageerror", (error) => erros.push(error.message));
   const dados = await preparar(page, "franqueado");
-  await page.goto("/comercial");
+  await navegar(page, "/comercial");
   await expect(page.getByRole("heading", { name: "Comercial e captação" })).toBeVisible();
   await expect(page.getByText("Lead de outra unidade")).toHaveCount(0);
   await page.getByRole("button", { name: "Novo lead" }).click();
@@ -232,7 +249,7 @@ test("franqueado cadastra lead da própria unidade, avança etapa e exige motivo
 
 test("comercial cria canal e campanha da unidade e filtra leads sem misturar a outra unidade", async ({ page }) => {
   const dados = await preparar(page, "franqueado");
-  await page.goto("/comercial");
+  await navegar(page, "/comercial");
   await expect(page.getByRole("button", { name: /Parceiro Beta/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Novo canal" }).click();
   await page.getByLabel("Nome do canal").fill("Indicação local");
@@ -261,7 +278,7 @@ test("comercial cria canal e campanha da unidade e filtra leads sem misturar a o
 
 test("comercial destaca retorno vencido e registra contato no histórico do lead", async ({ page }) => {
   const dados = await preparar(page, "franqueado");
-  await page.goto("/comercial");
+  await navegar(page, "/comercial");
   await page.getByRole("button", { name: "Novo lead" }).click();
   await page.getByLabel("Nome *").fill("Contato pendente");
   await page.getByLabel("Telefone").fill("11999998888");
@@ -281,7 +298,7 @@ test("comercial destaca retorno vencido e registra contato no histórico do lead
 
 test("admin define meta mensal por turma sem criar dados na outra unidade", async ({ page }) => {
   const dados = await preparar(page);
-  await page.goto("/");
+  await navegar(page, "/");
   await selecionarUnidade(page);
   await page.getByRole("link", { name: "Comercial" }).first().click();
   await page.getByRole("button", { name: "Definir meta" }).first().click();
@@ -295,7 +312,7 @@ test("admin define meta mensal por turma sem criar dados na outra unidade", asyn
 
 test("venda de franquias aparece só ao ADM e mantém Kanban e campanha separados do funil de alunos", async ({ page }) => {
   const dados = await preparar(page);
-  await page.goto("/expansao");
+  await navegar(page, "/expansao");
   await expect(page.getByRole("heading", { name: "IDM PSI Franquias" })).toBeVisible();
   await page.getByRole("button", { name: "Novo lead" }).click();
   await page.getByLabel("Nome *").fill("Interessado Franquia");
@@ -316,13 +333,13 @@ test("venda de franquias aparece só ao ADM e mantém Kanban e campanha separado
 
 test("franqueado não vê nem abre a área de venda de franquias", async ({ page }) => {
   await preparar(page, "franqueado");
-  await page.goto("/expansao");
+  await navegar(page, "/expansao");
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("link", { name: "Venda de franquias" })).toHaveCount(0);
 });
 
 test("página pública de interesse habilita envio após contato e consentimento", async ({ page }) => {
-  await page.goto("/quero-ser-franqueado");
+  await navegar(page, "/quero-ser-franqueado");
   await expect(page.getByRole("heading", { name: /Quer conhecer a oportunidade/ })).toBeVisible();
   const botao = page.getByRole("button", { name: "Quero saber mais" });
   await expect(botao).toBeDisabled();
@@ -334,7 +351,7 @@ test("página pública de interesse habilita envio após contato e consentimento
 
 test("social mídia separa menus e conteúdos da franqueadora e das unidades", async ({ page }) => {
   const dados = await preparar(page);
-  await page.goto("/social-franqueadora");
+  await navegar(page, "/social-franqueadora");
   await expect(page.getByRole("heading", { name: "Social mídia · Franqueadora" })).toBeVisible();
   await expect(page.locator("aside").getByText("Franqueadora", { exact: true })).toBeVisible();
   await expect(page.locator("aside").getByRole("link", { name: "Turmas" })).toHaveCount(0);
@@ -380,12 +397,12 @@ test("social mídia separa menus e conteúdos da franqueadora e das unidades", a
 
 test("franqueado acessa apenas social mídia da própria unidade", async ({ page }) => {
   const dados = await preparar(page, "franqueado");
-  await page.goto("/rede");
+  await navegar(page, "/rede");
   await expect(page).toHaveURL(/\/dashboard$/);
-  await page.goto("/social-franqueadora");
+  await navegar(page, "/social-franqueadora");
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("link", { name: "Social mídia central" })).toHaveCount(0);
-  await page.goto("/social-unidade");
+  await navegar(page, "/social-unidade");
   await expect(page.getByRole("heading", { name: "Social mídia · Unidade" })).toBeVisible();
   await page.getByRole("button", { name: "Novo conteúdo" }).click();
   await page.getByLabel("Título *").fill("Conteúdo local");
@@ -398,7 +415,7 @@ test("cards de leads mostram data e hora de entrada em Brasília nos dois funis"
   dados.franquia_expansao_leads.push({ id: "expansao-data", nome: "Interessado franquia", whatsapp: "5511999999999",
     email: null, cidade: "São Paulo", estado: "SP", fase: "novo", responsavel_id: null,
     arquivado_em: null, created_at: "2026-10-06T11:30:00Z", updated_at: "2026-10-06T11:30:00Z" });
-  await page.goto("/expansao");
+  await navegar(page, "/expansao");
   await expect(page.getByRole("region", { name: "Novo" }).getByText("Interessado franquia")).toBeVisible();
   await expect(page.getByRole("region", { name: "Novo" }).getByText("Entrada (Brasília): 06/10/2026, 08:30")).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Entrada (Brasília)" })).toBeVisible();
@@ -411,7 +428,7 @@ test("cards de leads mostram data e hora de entrada em Brasília nos dois funis"
 
 test("social central alterna entre cortes e copies com pendências independentes", async ({ page }) => {
   const dados = await preparar(page);
-  await page.goto("/social-franqueadora");
+  await navegar(page, "/social-franqueadora");
   await expect(page.getByRole("tab", { name: "Cortes" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Copies para anúncios" }).click();
   await expect(page.getByRole("heading", { name: "Copies para anúncios" })).toBeVisible();
@@ -437,7 +454,7 @@ test("admin cria turma, lança receita, baixa no caixa e configura royalties sem
   const erros: string[] = [];
   page.on("pageerror", (error) => erros.push(error.message));
   const dados = await preparar(page);
-  await page.goto("/");
+  await navegar(page, "/");
   await selecionarUnidade(page);
   await page.getByRole("link", { name: "Turmas", exact: true }).click();
   await page.getByRole("button", { name: "Nova turma" }).click();
@@ -500,7 +517,7 @@ test("franqueado consulta pelo celular sem ações administrativas e sem sair da
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await preparar(page, "franqueado");
-  await page.goto("/turmas");
+  await navegar(page, "/turmas");
   await expect(page.getByText("Turma Alfa", { exact: true })).toBeVisible();
   await expect(page.getByText("Turma Beta", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Nova turma" })).toHaveCount(0);
@@ -525,7 +542,7 @@ test("troca de unidade não mantém turmas nem lançamentos da unidade anterior"
   page,
 }) => {
   await preparar(page);
-  await page.goto("/");
+  await navegar(page, "/");
   await selecionarUnidade(page);
   await page.getByRole("link", { name: "Turmas", exact: true }).click();
   await expect(page.getByText("Turma Alfa", { exact: true })).toBeVisible();
@@ -550,7 +567,7 @@ test("erro de leitura não é apresentado como financeiro zerado", async ({
       body: JSON.stringify({ message: "permission denied", code: "42501" }),
     }),
   );
-  await page.goto("/dre");
+  await navegar(page, "/dre");
   await expect(page.getByRole("alert")).toContainText(
     "Não foi possível carregar",
     { timeout: 15000 },
@@ -565,7 +582,7 @@ test("editar baixa e vínculo preserva competência; concorrência não sobrescr
   page,
 }) => {
   const dados = await preparar(page);
-  await page.goto("/");
+  await navegar(page, "/");
   await selecionarUnidade(page);
   await page.getByRole("link", { name: "Financeiro", exact: true }).click();
   await page.getByLabel("Mês de referência").fill("2026-10");
