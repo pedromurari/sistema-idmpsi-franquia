@@ -1,4 +1,7 @@
--- Unidade fictícia, só pra testar as telas (turmas, financeiro, notas) --
--- marcada "Teste" no nome pra não confundir com unidade real depois.
+-- Unidade fictícia, só pra testar as telas (turmas, financeiro, notas).
+-- Inativa por padrão para não aparecer na contagem de franquias em operação.
 insert into public.franquias (nome, cidade, estado, ativo)
-values ('IDM PSI — Unidade Teste', 'São Paulo', 'SP', true);
+select 'IDM PSI — Unidade Teste', 'São Paulo', 'SP', false
+where not exists (
+  select 1 from public.franquias where nome = 'IDM PSI — Unidade Teste'
+);

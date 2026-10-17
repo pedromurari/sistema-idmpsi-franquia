@@ -5,6 +5,14 @@ módulos pra uma visão completa de franquia. Este arquivo existe pra qualquer
 agente (Claude ou Codex) que pegar este projeto saber **onde estamos** e
 **o que falta**, sem precisar reler a conversa inteira.
 
+**Contexto de lançamento (17/10/2026): ainda não existe unidade franqueada real.**
+O registro de teste no Supabase está inativo. Construção e testes podem avançar
+com duas unidades simuladas; homologação com contas reais será feita quando
+houver o primeiro franqueado. Além dos módulos abaixo, há três frentes que
+precisam estar no plano antes da campanha: site institucional, página pública
+de captação de franquias e área de membros por unidade. Veja
+[`docs/ECOSSISTEMA_DIGITAL.md`](docs/ECOSSISTEMA_DIGITAL.md).
+
 **Antes de implementar qualquer módulo, leia `AGENTS.md`** (convenções de
 segurança, RLS+GRANT, o que reaproveitar do CRM interno).
 
@@ -184,6 +192,12 @@ próprio gateway vinculado).
 
 Dependências reais: os módulos 4, 5 e 7 precisam de **turmas** dentro da unidade.
 A estrutura da migration 0003 já foi verificada no banco remoto. Sugestão de sequência:
+
+**Antes da primeira unidade:** fechar o caminho site institucional → página
+de franquias → lead em `/expansao`, preparar o kit de abertura e decidir se a
+área de membros atenderá apenas a equipe da unidade ou também alunos. Isso
+não depende de unidades piloto. O portal atual não deve contar a unidade de
+teste como franquia em operação.
 
 1. **Módulo 3 (parte 2):** `franquia_turmas` + fluxo de caixa por turma +
    royalties -- código e banco preparados; homologar conforme o guia da etapa 1.

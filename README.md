@@ -7,6 +7,11 @@ DRE e as notas fiscais da própria unidade; o franqueador (ADM geral) vê tudo.
 sistema separado de propósito, porque aqui entra dado fiscal/financeiro de
 terceiros (franqueados), não só dado interno da Onze Digital.
 
+**Preparação da rede:** em 17/10/2026 ainda não há unidade franqueada real.
+O site institucional, a página pública de captação e a futura área de membros
+por unidade fazem parte do plano, com repositórios e públicos distintos. Veja
+[`docs/ECOSSISTEMA_DIGITAL.md`](docs/ECOSSISTEMA_DIGITAL.md).
+
 ## O que já está pronto
 
 - Login com Supabase Auth, 2 papéis: `franqueador` e `franqueado`.
@@ -55,7 +60,7 @@ terceiros (franqueados), não só dado interno da Onze Digital.
    ```
    npx supabase gen types typescript --project-id <id> > src/integrations/supabase/types.ts
    ```
-2. **Criar as contas dos primeiros franqueados** (Supabase Auth) + a linha
+2. **Criar as contas dos primeiros franqueados quando houver uma unidade real** (Supabase Auth) + a linha
    correspondente em `franquia_profiles` e `franquia_user_roles` — hoje não
    tem tela de cadastro, é feito direto no banco/pelo franqueador.
 3. **Automatizar a alimentação financeira**: o franqueador já pode cadastrar
@@ -65,11 +70,12 @@ terceiros (franqueados), não só dado interno da Onze Digital.
    (status `pendente`). A emissão de verdade (integração com prefeitura/NFS-e
    ou um emissor terceiro) precisa virar uma **edge function** com
    `service_role`, nunca algo que o navegador do franqueado chama direto.
-5. ~~**2FA** pros logins de franqueado/franqueador~~ — **implementado em
-   13/10/2026**: TOTP obrigatório (sem opção de pular) via `supabase.auth.mfa`,
+5. ~~**2FA** pros logins de franqueado/franqueador~~ — **interface implementada em
+   13/10/2026, exigência no banco em 16/10/2026**: TOTP obrigatório (sem opção de pular) via `supabase.auth.mfa`,
    gate em `MfaGate.tsx` dentro do `ProtectedRoute`. Primeiro login depois da
    mudança força o cadastro (QR code); logins seguintes pedem o código de
-   6 dígitos até fechar aal2 na sessão.
+   6 dígitos até fechar aal2 na sessão. A migration `0017_exigir_mfa_no_banco.sql`
+   impede que um JWT `aal1` contorne a interface e leia/escreva dados de negócio.
 6. Deploy: o projeto próprio na Vercel já existe em
    `https://sistema.idmpsifranquia.com`. As telas de expansão e comercial foram
    publicadas em 02/10/2026; a captura pública usa uma Edge Function no

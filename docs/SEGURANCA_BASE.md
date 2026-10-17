@@ -1,12 +1,13 @@
-# Revisão do alicerce — 02/10/2026
+# Revisão do alicerce — iniciada em 02/10/2026, atualizada em 17/10/2026
 
 Esta revisão é uma checagem técnica do código e do projeto Supabase vinculado
 `bremvrsjmnsvtpgcsgtj`, não uma auditoria independente nem um teste de
-invasão. Não há deploy Vercel para validar cabeçalhos em produção.
+invasão. O portal está publicado na Vercel; os cabeçalhos configurados foram
+conferidos no deploy de produção em 16/10/2026.
 
 ## Verificado
 
-- As 11 tabelas públicas do projeto remoto têm RLS ativo. `anon` não tem
+- As tabelas públicas conferidas no projeto remoto têm RLS ativo. `anon` não tem
   `SELECT` e `authenticated` não tem `TRUNCATE` em nenhuma delas.
 - Financeiro e notas têm auditoria automática. A meta comercial também é
   auditada; mudanças de etapa do lead têm histórico separado.
@@ -17,17 +18,19 @@ invasão. Não há deploy Vercel para validar cabeçalhos em produção.
   emitida, forje número/PDF ou atribua a solicitação a outro usuário. Foi
   aplicada ao projeto remoto em 02/10/2026.
 - O navegador usa apenas a chave pública do Supabase. `.env` é ignorado pelo
-  Git. `vercel.json` agora especifica CSP e demais cabeçalhos de proteção;
-  precisam ser conferidos quando houver deploy.
+  Git. `vercel.json` especifica CSP e demais cabeçalhos de proteção; a
+  configuração consta no deploy de produção inspecionado em 16/10/2026.
 
 ## Antes de produção com franqueados reais
 
-1. **MFA obrigatório e aplicado no banco**: ativar fluxo de segundo fator e
-   exigir sessão `aal2` para dados financeiros/fiscais. A interface sozinha
-   não protege a API. Planejar recuperação de conta e suporte.
-2. **Homologação real**: criar contas de duas unidades, testar login e todas
-   as leituras/escritas autorizadas e negadas via API real. Testes atuais de
-   interface simulam a API; testes SQL usam Postgres em memória.
+1. **MFA obrigatório e aplicado no banco — concluído em 16/10/2026**:
+   `MfaGate` exige TOTP e a migration 0017 exige sessão `aal2` nas tabelas
+   de negócio. Planejar recuperação de conta e suporte antes da primeira
+   unidade real.
+2. **Homologação real — aguarda a primeira unidade**: ainda não há franqueados
+   em operação (17/10/2026). Testes com duas unidades simuladas cobrem acesso
+   cruzado em Postgres em memória e a interface com API simulada. Quando houver
+   contas reais, testar login, leituras/escritas permitidas e negadas via API.
 3. **Migrations reprodutíveis**: reconciliar o histórico remoto das migrations
    aplicadas manualmente antes de usar `supabase db push`; criar verificação em
    CI para schema, RLS, grants e testes.
