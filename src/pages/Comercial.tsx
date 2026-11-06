@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useViewAs } from "@/contexts/ViewAsContext";
-import { useComercial, type Canal, type Campanha, type Lead, type Venda, type VendedorPerfil } from "@/hooks/useComercial";
+import { useComercial, type Canal, type Campanha, type Lead, type RegraComissao, type VendedorPerfil } from "@/hooks/useComercial";
 import { useTurmas } from "@/hooks/useFinanceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { formatData, hoje, mesAtual, type Turma } from "@/lib/financeiro";
@@ -45,13 +45,22 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
   const [novoCanal, setNovoCanal] = useState(false);
   const [novaCampanha, setNovaCampanha] = useState(false);
   const [vendaLead, setVendaLead] = useState<Lead | null>(null);
+  const [metaVendedorAlvo, setMetaVendedorAlvo] = useState<{ id: string; nome: string } | null>(null);
+  const [regrasAbertas, setRegrasAbertas] = useState(false);
   const comercial = useComercial(franquiaId, mes);
   const turmas = useTurmas(franquiaId);
   if (comercial.isPending || turmas.isPending) return <Loader2 aria-label="Carregando comercial" className="h-6 w-6 animate-spin mx-auto" />;
   if (comercial.isError || turmas.isError) return <ErroCarregamento retry={() => { void comercial.refetch(); void turmas.refetch(); }} />;
 
-  const { leads, canais, campanhas, vendedores, vendas } = comercial.data;
+  const { leads, canais, campanhas, vendedores, vendas, metasVendedor, regrasComissao, fechamentos } = comercial.data;
   const vendaPorLead = new Map(vendas.map((venda) => [venda.lead_id, venda]));
+  const vendedoresConhecidos = new Map<string, string>();
+  for (const v of vendedores) vendedoresConhecidos.set(v.id, v.nome);
+  for (const m of metasVendedor) if (!vendedoresConhecidos.has(m.vendedor_id)) vendedoresConhecidos.set(m.vendedor_id, nomeVendedor(m.vendedor_id, vendedores, user));
+  for (const f of fechamentos) if (!vendedoresConhecidos.has(f.vendedor_id)) vendedoresConhecidos.set(f.vendedor_id, nomeVendedor(f.vendedor_id, vendedores, user));
+  if (souVendedor && user && !vendedoresConhecidos.has(user.id)) vendedoresConhecidos.set(user.id, user.nome);
+  const regraPadrao = regrasComissao.find((r) => r.vendedor_id === null) ?? null;
+  const percentualAplicavel = (vendedorId: string) => regrasComissao.find((r) => r.vendedor_id === vendedorId)?.percentual ?? regraPadrao?.percentual ?? null;
   const lista = leads.filter((lead) =>
     (!somenteAtrasados || (lead.proxima_acao_em !== null && lead.proxima_acao_em < hoje() && !["perdido", "formado", "pos_graduacao"].includes(lead.etapa))) &&
     (!somenteMeusLeads || lead.vendedor_id === user?.id) &&
@@ -99,6 +108,37 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
           </div>;
         })}</div>}
       <p className="text-xs text-muted-foreground">Matrícula aqui é uma etapa comercial; ainda não cria ficha de aluno nem lançamento financeiro.</p>
+    </Card>
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><h2 className="font-semibold">Metas e comissão por vendedor</h2>
+          <p className="text-xs text-muted-foreground">Comissão calculada sobre o valor líquido das vendas confirmadas no mês, pela regra ativa da unidade.</p></div>
+        {user?.role === "franqueador" && <Button variant="outline" size="sm" onClick={() => setRegrasAbertas(true)}>Regras de comissão</Button>}
+      </div>
+      {vendedoresConhecidos.size === 0 ? <p className="text-sm text-muted-foreground">Nenhum vendedor com papel atribuído nesta unidade ainda.</p> :
+        <div className="space-y-2">{[...vendedoresConhecidos.entries()].map(([id, nome]) => {
+          const meta = metasVendedor.find((m) => m.vendedor_id === id)?.meta_matriculas ?? null;
+          const realizado = vendas.filter((v) => v.vendedor_id === id && v.data_registro.startsWith(mes)).length;
+          const percentual = percentualAplicavel(id);
+          const fechamento = fechamentos.find((f) => f.vendedor_id === id) ?? null;
+          return <div key={id} className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-sm">
+            <span className="font-medium">{nome}</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span>{realizado} / {meta ?? "—"} matrícula(s)</span>
+              <span className="text-muted-foreground">{percentual !== null ? `${percentual}% comissão` : "sem regra"}</span>
+              {fechamento
+                ? <span className={fechamento.status === "pago" ? "text-emerald-600" : ""}>
+                    R$ {Number(fechamento.valor_comissao).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · {fechamento.status === "pago" ? "pago" : "fechado"}
+                  </span>
+                : null}
+              {user?.role === "franqueador" && <Button variant="outline" size="sm" onClick={() => setMetaVendedorAlvo({ id, nome })}>Definir meta</Button>}
+              {user?.role === "franqueador" && !fechamento &&
+                <FecharComissaoButton vendedorId={id} mes={mes} disabled={percentual === null} />}
+              {user?.role === "franqueador" && fechamento && fechamento.status === "fechado" &&
+                <MarcarComissaoPagaButton fechamentoId={fechamento.id} />}
+            </div>
+          </div>;
+        })}</div>}
     </Card>
     <Card className="p-4 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-semibold">Canais e campanhas</h2>
@@ -166,6 +206,9 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
     {metaTurma && <MetaDialog key={`${metaTurma.id}:${mes}`} franquiaId={franquiaId} turma={metaTurma} mes={mes}
       valorAtual={comercial.data.metas.find((item) => item.turma_id === metaTurma.id)?.meta_matriculas ?? null} fechar={() => setMetaTurma(null)} />}
     {vendaLead && <VendaDialog franquiaId={franquiaId} lead={vendaLead} turmas={turmas.data} vendedores={vendedores} fechar={() => setVendaLead(null)} />}
+    {metaVendedorAlvo && <MetaVendedorDialog key={`${metaVendedorAlvo.id}:${mes}`} franquiaId={franquiaId} vendedorId={metaVendedorAlvo.id} nome={metaVendedorAlvo.nome} mes={mes}
+      valorAtual={metasVendedor.find((m) => m.vendedor_id === metaVendedorAlvo.id)?.meta_matriculas ?? null} fechar={() => setMetaVendedorAlvo(null)} />}
+    {regrasAbertas && <RegrasComissaoDialog franquiaId={franquiaId} regras={regrasComissao} vendedores={vendedores} fechar={() => setRegrasAbertas(false)} />}
   </div>;
 }
 
@@ -439,5 +482,123 @@ function MetaDialog({ franquiaId, turma, mes, valorAtual, fechar }: { franquiaId
     <form onSubmit={(e) => void salvar(e)} className="space-y-4"><Campo id="meta-valor" label="Matrículas previstas"><Input id="meta-valor" type="number" min={0} max={10000} value={valor} onChange={(e) => setValor(e.target.value)} required /></Campo>
       {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={fechar}>Cancelar</Button><Button disabled={salvando} type="submit">Salvar meta</Button></div></form>
+  </DialogContent></Dialog>;
+}
+
+function MetaVendedorDialog({ franquiaId, vendedorId, nome, mes, valorAtual, fechar }: { franquiaId: string; vendedorId: string; nome: string; mes: string; valorAtual: number | null; fechar: () => void }) {
+  const client = useQueryClient();
+  const [valor, setValor] = useState(valorAtual?.toString() ?? "");
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  async function salvar(event: FormEvent) {
+    event.preventDefault();
+    if (!/^\d+$/.test(valor) || Number(valor) > 10000) return setErro("Informe uma meta entre 0 e 10000.");
+    setSalvando(true);
+    const resultado = await supabase.from("franquia_metas_vendedor").upsert({ franquia_id: franquiaId,
+      vendedor_id: vendedorId, competencia: `${mes}-01`, meta_matriculas: Number(valor) },
+      { onConflict: "franquia_id,vendedor_id,competencia" });
+    setSalvando(false);
+    if (resultado.error) return setErro(resultado.error.message);
+    await client.invalidateQueries({ queryKey: ["comercial"] });
+    toast.success("Meta salva."); fechar();
+  }
+  return <Dialog open onOpenChange={(open) => { if (!open && !salvando) fechar(); }}><DialogContent>
+    <DialogHeader><DialogTitle>Meta de matrículas</DialogTitle><DialogDescription>{nome} · {mes}</DialogDescription></DialogHeader>
+    <form onSubmit={(e) => void salvar(e)} className="space-y-4"><Campo id="meta-vendedor-valor" label="Matrículas previstas"><Input id="meta-vendedor-valor" type="number" min={0} max={10000} value={valor} onChange={(e) => setValor(e.target.value)} required /></Campo>
+      {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
+      <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={fechar}>Cancelar</Button><Button disabled={salvando} type="submit">Salvar meta</Button></div></form>
+  </DialogContent></Dialog>;
+}
+
+function FecharComissaoButton({ vendedorId, mes, disabled }: { vendedorId: string; mes: string; disabled: boolean }) {
+  const client = useQueryClient();
+  const [salvando, setSalvando] = useState(false);
+  async function fechar() {
+    if (salvando) return;
+    setSalvando(true);
+    const resultado = await supabase.rpc("franquia_fecha_comissao", { p_vendedor_id: vendedorId, p_competencia: `${mes}-01` });
+    setSalvando(false);
+    if (resultado.error) return toast.error(resultado.error.message);
+    await client.invalidateQueries({ queryKey: ["comercial"] });
+    toast.success("Comissão do mês fechada.");
+  }
+  return <Button variant="outline" size="sm" disabled={salvando || disabled} title={disabled ? "Cadastre uma regra de comissão primeiro" : undefined} onClick={() => void fechar()}>
+    {salvando ? "Fechando…" : "Fechar comissão"}</Button>;
+}
+
+function MarcarComissaoPagaButton({ fechamentoId }: { fechamentoId: string }) {
+  const client = useQueryClient();
+  const [salvando, setSalvando] = useState(false);
+  async function marcar() {
+    if (salvando) return;
+    setSalvando(true);
+    const resultado = await supabase.from("franquia_comissoes_fechamento").update({ status: "pago" }).eq("id", fechamentoId);
+    setSalvando(false);
+    if (resultado.error) return toast.error(resultado.error.message);
+    await client.invalidateQueries({ queryKey: ["comercial"] });
+    toast.success("Comissão marcada como paga.");
+  }
+  return <Button variant="outline" size="sm" disabled={salvando} onClick={() => void marcar()}>{salvando ? "Salvando…" : "Marcar como paga"}</Button>;
+}
+
+function RegrasComissaoDialog({ franquiaId, regras, vendedores, fechar }: { franquiaId: string; regras: RegraComissao[]; vendedores: VendedorPerfil[]; fechar: () => void }) {
+  const client = useQueryClient();
+  const [vendedorId, setVendedorId] = useState("");
+  const [percentual, setPercentual] = useState("");
+  const [observacoes, setObservacoes] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  const temPadrao = regras.some((r) => r.vendedor_id === null);
+  const vendedoresSemRegra = vendedores.filter((v) => !regras.some((r) => r.vendedor_id === v.id));
+
+  async function salvar(event: FormEvent) {
+    event.preventDefault();
+    setErro("");
+    if (!vendedorId) return setErro("Selecione a quem a regra se aplica.");
+    const numero = Number(percentual.replace(",", "."));
+    if (!/^\d+(?:[.,]\d{1,2})?$/.test(percentual) || numero < 0 || numero > 100) return setErro("Percentual deve ser entre 0 e 100.");
+    setSalvando(true);
+    const resultado = await supabase.from("franquia_regra_comissao").insert({
+      franquia_id: franquiaId, vendedor_id: vendedorId === "__padrao__" ? null : vendedorId, percentual: numero, observacoes: observacoes.trim() || null,
+    });
+    setSalvando(false);
+    if (resultado.error) return setErro(resultado.error.message);
+    await client.invalidateQueries({ queryKey: ["comercial"] });
+    toast.success("Regra de comissão salva.");
+    setVendedorId(""); setPercentual(""); setObservacoes("");
+  }
+
+  async function atualizarPercentual(regraId: string, novoValor: string) {
+    const numero = Number(novoValor.replace(",", "."));
+    if (!/^\d+(?:[.,]\d{1,2})?$/.test(novoValor) || numero < 0 || numero > 100) return;
+    const resultado = await supabase.from("franquia_regra_comissao").update({ percentual: numero }).eq("id", regraId);
+    if (resultado.error) return toast.error(resultado.error.message);
+    await client.invalidateQueries({ queryKey: ["comercial"] });
+  }
+
+  return <Dialog open onOpenChange={(open) => { if (!open) fechar(); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+    <DialogHeader><DialogTitle>Regras de comissão</DialogTitle>
+      <DialogDescription>Percentual aplicado sobre o valor líquido das vendas confirmadas no mês. Nenhum valor padrão do sistema — cada regra é cadastrada manualmente.</DialogDescription></DialogHeader>
+    <div className="space-y-2">
+      {regras.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma regra cadastrada ainda.</p>}
+      {regras.map((regra) => <div key={regra.id} className="flex items-center justify-between gap-2 border-t pt-2 text-sm">
+        <span>{regra.vendedor_id === null ? "Padrão da unidade" : vendedores.find((v) => v.id === regra.vendedor_id)?.nome ?? "Vendedor"}</span>
+        <Input type="text" inputMode="decimal" defaultValue={regra.percentual} className="w-20" aria-label={`Percentual de ${regra.vendedor_id === null ? "padrão da unidade" : "vendedor"}`}
+          onBlur={(e) => void atualizarPercentual(regra.id, e.target.value)} />
+      </div>)}
+    </div>
+    <form onSubmit={(e) => void salvar(e)} className="space-y-4 border-t pt-4"><fieldset disabled={salvando} className="space-y-4">
+      <p className="text-sm font-medium">Nova regra</p>
+      <Campo id="regra-vendedor" label="Aplica a"><select id="regra-vendedor" className={selectClass} value={vendedorId} onChange={(e) => setVendedorId(e.target.value)}>
+        <option value="">Selecione…</option>
+        {!temPadrao && <option value="__padrao__">Padrão da unidade</option>}
+        {vendedoresSemRegra.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+      </select></Campo>
+      <Campo id="regra-percentual" label="Percentual (%) *"><Input id="regra-percentual" inputMode="decimal" value={percentual} onChange={(e) => setPercentual(e.target.value)} required /></Campo>
+      <Campo id="regra-obs" label="Observações"><Input id="regra-obs" value={observacoes} maxLength={300} onChange={(e) => setObservacoes(e.target.value)} /></Campo>
+      {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
+      <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={fechar}>Fechar</Button>
+        <Button type="submit" disabled={salvando || !vendedorId}>{salvando ? "Salvando…" : "Adicionar regra"}</Button></div>
+    </fieldset></form>
   </DialogContent></Dialog>;
 }

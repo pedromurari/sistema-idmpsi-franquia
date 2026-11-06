@@ -1023,6 +1023,147 @@ export type Database = {
           },
         ]
       }
+      franquia_metas_vendedor: {
+        Row: {
+          competencia: string
+          created_at: string
+          franquia_id: string
+          id: string
+          meta_matriculas: number
+          updated_at: string
+          vendedor_id: string
+        }
+        Insert: {
+          competencia: string
+          created_at?: string
+          franquia_id: string
+          id?: string
+          meta_matriculas: number
+          updated_at?: string
+          vendedor_id: string
+        }
+        Update: {
+          competencia?: string
+          created_at?: string
+          franquia_id?: string
+          id?: string
+          meta_matriculas?: number
+          updated_at?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_metas_vendedor_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      franquia_regra_comissao: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          criado_por: string
+          franquia_id: string
+          id: string
+          observacoes: string | null
+          percentual: number
+          updated_at: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          criado_por?: string
+          franquia_id: string
+          id?: string
+          observacoes?: string | null
+          percentual: number
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          criado_por?: string
+          franquia_id?: string
+          id?: string
+          observacoes?: string | null
+          percentual?: number
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_regra_comissao_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      franquia_comissoes_fechamento: {
+        Row: {
+          competencia: string
+          created_at: string
+          fechado_em: string
+          fechado_por: string
+          franquia_id: string
+          id: string
+          observacoes: string | null
+          pago_em: string | null
+          percentual_aplicado: number
+          status: string
+          total_vendas_liquido: number
+          updated_at: string
+          valor_comissao: number
+          vendedor_id: string
+        }
+        Insert: {
+          competencia: string
+          created_at?: string
+          fechado_em?: string
+          fechado_por: string
+          franquia_id: string
+          id?: string
+          observacoes?: string | null
+          pago_em?: string | null
+          percentual_aplicado: number
+          status?: string
+          total_vendas_liquido: number
+          updated_at?: string
+          valor_comissao: number
+          vendedor_id: string
+        }
+        Update: {
+          competencia?: string
+          created_at?: string
+          fechado_em?: string
+          fechado_por?: string
+          franquia_id?: string
+          id?: string
+          observacoes?: string | null
+          pago_em?: string | null
+          percentual_aplicado?: number
+          status?: string
+          total_vendas_liquido?: number
+          updated_at?: string
+          valor_comissao?: number
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_comissoes_fechamento_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquias: {
         Row: {
           ativo: boolean
@@ -1071,7 +1212,12 @@ export type Database = {
         Args: { p_contato_hash: string; p_ip_hash: string }
         Returns: boolean
       }
+      franquia_fecha_comissao: {
+        Args: { p_vendedor_id: string; p_competencia: string }
+        Returns: Database["public"]["Tables"]["franquia_comissoes_fechamento"]["Row"]
+      }
       franquia_is_franqueador: { Args: never; Returns: boolean }
+      franquia_is_vendedor: { Args: never; Returns: boolean }
       franquia_minha_unidade: { Args: never; Returns: string }
       franquia_usuario_ativo: { Args: never; Returns: boolean }
     }

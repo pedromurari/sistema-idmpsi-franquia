@@ -10,6 +10,9 @@ export type LeadEtapa = Database["public"]["Tables"]["franquia_lead_etapas"]["Ro
 export type Canal = Database["public"]["Tables"]["franquia_canais"]["Row"];
 export type Campanha = Database["public"]["Tables"]["franquia_campanhas"]["Row"];
 export type Venda = Database["public"]["Tables"]["franquia_vendas"]["Row"];
+export type MetaVendedor = Database["public"]["Tables"]["franquia_metas_vendedor"]["Row"];
+export type RegraComissao = Database["public"]["Tables"]["franquia_regra_comissao"]["Row"];
+export type FechamentoComissao = Database["public"]["Tables"]["franquia_comissoes_fechamento"]["Row"];
 export type VendedorPerfil = { id: string; nome: string };
 
 export function useComercial(franquiaId: string, mes: string) {
@@ -18,7 +21,7 @@ export function useComercial(franquiaId: string, mes: string) {
     queryKey: ["comercial", user?.id, franquiaId, mes],
     queryFn: async ({ signal }) => {
       const { inicio, fim } = limitesMes(mes);
-      const [leads, metas, etapas, canais, campanhas, vendas, papeisVendedor] = await Promise.all([
+      const [leads, metas, etapas, canais, campanhas, vendas, metasVendedor, regrasComissao, fechamentos, papeisVendedor] = await Promise.all([
         todasPaginas<Lead>((de, ate) => supabase.from("franquia_leads").select("*")
           .eq("franquia_id", franquiaId).order("created_at", { ascending: false })
           .order("id").range(de, ate).abortSignal(signal)),
@@ -39,6 +42,15 @@ export function useComercial(franquiaId: string, mes: string) {
           .eq("franquia_id", franquiaId).neq("status", "cancelada")
           .order("created_at", { ascending: false }).order("id")
           .range(de, ate).abortSignal(signal)),
+        todasPaginas<MetaVendedor>((de, ate) => supabase.from("franquia_metas_vendedor").select("*")
+          .eq("franquia_id", franquiaId).eq("competencia", inicio).order("vendedor_id")
+          .range(de, ate).abortSignal(signal)),
+        todasPaginas<RegraComissao>((de, ate) => supabase.from("franquia_regra_comissao").select("*")
+          .eq("franquia_id", franquiaId).eq("ativo", true).order("vendedor_id")
+          .range(de, ate).abortSignal(signal)),
+        todasPaginas<FechamentoComissao>((de, ate) => supabase.from("franquia_comissoes_fechamento").select("*")
+          .eq("franquia_id", franquiaId).eq("competencia", inicio).order("vendedor_id")
+          .range(de, ate).abortSignal(signal)),
         // RLS de franquia_user_roles/franquia_profiles só libera leitura de
         // terceiros pro franqueador -- franqueado/vendedor não conseguem
         // resolver nome de outro usuário mesmo tentando (nem deveriam).
@@ -52,7 +64,7 @@ export function useComercial(franquiaId: string, mes: string) {
             .eq("franquia_id", franquiaId).in("id", idsVendedores).abortSignal(signal)
         : { data: [] as VendedorPerfil[] };
       return {
-        leads, metas, etapas, campanhas, vendas,
+        leads, metas, etapas, campanhas, vendas, metasVendedor, regrasComissao, fechamentos,
         canais: canais.filter((canal) => !canal.franquia_id || canal.franquia_id === franquiaId),
         vendedores: perfis.data ?? [],
       };
