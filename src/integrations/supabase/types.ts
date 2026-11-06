@@ -1212,6 +1212,30 @@ export type Database = {
         Args: { p_contato_hash: string; p_ip_hash: string }
         Returns: boolean
       }
+      franquia_comercial_ciclo_venda: {
+        Args: { p_franquia_id: string; p_meses?: number }
+        Returns: { dias_medio: number; amostras: number }[]
+      }
+      franquia_comercial_funil: {
+        Args: { p_franquia_id: string; p_inicio: string; p_fim: string }
+        Returns: { etapa: string; quantidade: number }[]
+      }
+      franquia_comercial_leads_canal_mes: {
+        Args: { p_franquia_id: string; p_meses?: number }
+        Returns: { mes: string; canal_nome: string; quantidade: number }[]
+      }
+      franquia_comercial_vendas_dia_semana: {
+        Args: { p_franquia_id: string; p_meses?: number }
+        Returns: { dia_semana: number; quantidade: number }[]
+      }
+      franquia_comercial_vendas_mes: {
+        Args: { p_franquia_id: string; p_meses?: number }
+        Returns: { mes: string; quantidade: number; valor_liquido: number }[]
+      }
+      franquia_comercial_vendedor_resumo: {
+        Args: { p_franquia_id: string; p_competencia: string }
+        Returns: { vendedor_id: string; leads_atribuidos: number; vendas: number; valor_liquido: number; atividades: number }[]
+      }
       franquia_fecha_comissao: {
         Args: { p_vendedor_id: string; p_competencia: string }
         Returns: Database["public"]["Tables"]["franquia_comissoes_fechamento"]["Row"]

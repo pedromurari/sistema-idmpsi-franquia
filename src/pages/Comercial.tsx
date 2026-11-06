@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Search, Pencil } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { RequerUnidade } from "@/components/RequerUnidade";
 import { HistoricoLead } from "@/components/comercial/HistoricoLead";
@@ -12,10 +13,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from "@/contexts/AuthContext";
 import { useViewAs } from "@/contexts/ViewAsContext";
 import { useComercial, type Canal, type Campanha, type Lead, type RegraComissao, type VendedorPerfil } from "@/hooks/useComercial";
+import { useComercialDados } from "@/hooks/useComercialDados";
 import { useTurmas } from "@/hooks/useFinanceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { formatData, hoje, mesAtual, type Turma } from "@/lib/financeiro";
 import { dataHoraLead } from "@/lib/dataHoraLead";
+
+const coresCanal = ["hsl(var(--primary))", "#f59e0b", "#10b981", "#6366f1", "#ef4444", "#0ea5e9", "#a855f7", "#64748b"];
+const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const etapas = [
   ["lead", "Lead"], ["atendimento", "Atendimento"], ["experiencia", "Entrevista / experiência"],
@@ -47,6 +52,7 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
   const [vendaLead, setVendaLead] = useState<Lead | null>(null);
   const [metaVendedorAlvo, setMetaVendedorAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [regrasAbertas, setRegrasAbertas] = useState(false);
+  const [dadosAbertos, setDadosAbertos] = useState(false);
   const comercial = useComercial(franquiaId, mes);
   const turmas = useTurmas(franquiaId);
   if (comercial.isPending || turmas.isPending) return <Loader2 aria-label="Carregando comercial" className="h-6 w-6 animate-spin mx-auto" />;
@@ -199,6 +205,14 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
         </section>;
       })}
     </div>
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><h2 className="font-semibold">Dados</h2>
+          <p className="text-xs text-muted-foreground">Leads, funil, vendas e comparativo por vendedor — agregados no banco, últimos 6 meses.</p></div>
+        <Button variant="outline" size="sm" onClick={() => setDadosAbertos(!dadosAbertos)}>{dadosAbertos ? "Ocultar" : "Ver dados"}</Button>
+      </div>
+      {dadosAbertos && <DadosComerciais franquiaId={franquiaId} mes={mes} vendedoresConhecidos={vendedoresConhecidos} />}
+    </Card>
     {editando !== undefined && <LeadDialog key={editando?.id ?? "novo"} franquiaId={franquiaId} lead={editando} turmas={turmas.data} canais={canais} campanhas={campanhas} fechar={() => setEditando(undefined)} />}
     {historicoLead && <HistoricoLead key={historicoLead.id} lead={historicoLead} fechar={() => setHistoricoLead(null)} />}
     {novoCanal && <CanalDialog franquiaId={franquiaId} fechar={() => setNovoCanal(false)} />}
@@ -601,4 +615,74 @@ function RegrasComissaoDialog({ franquiaId, regras, vendedores, fechar }: { fran
         <Button type="submit" disabled={salvando || !vendedorId}>{salvando ? "Salvando…" : "Adicionar regra"}</Button></div>
     </fieldset></form>
   </DialogContent></Dialog>;
+}
+
+function rotuloMes(mes: string) {
+  return new Date(`${mes}T00:00:00`).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+}
+
+function DadosComerciais({ franquiaId, mes, vendedoresConhecidos }: { franquiaId: string; mes: string; vendedoresConhecidos: Map<string, string> }) {
+  const dados = useComercialDados(franquiaId, mes);
+  if (dados.isPending) return <Loader2 aria-label="Carregando dados" className="h-5 w-5 animate-spin mx-auto" />;
+  if (dados.isError) return <ErroCarregamento retry={() => void dados.refetch()} />;
+
+  const canaisUnicos = [...new Set(dados.data.leadsCanalMes.map((item) => item.canal_nome))];
+  const mesesUnicos = [...new Set(dados.data.leadsCanalMes.map((item) => item.mes))].sort();
+  const leadsPorMes = mesesUnicos.map((m) => {
+    const linha: Record<string, string | number> = { mes: rotuloMes(m) };
+    for (const canal of canaisUnicos) linha[canal] = dados.data.leadsCanalMes.find((item) => item.mes === m && item.canal_nome === canal)?.quantidade ?? 0;
+    return linha;
+  });
+  const funilOrdenado = etapas.map(([valor, titulo]) => ({
+    etapa: titulo, quantidade: dados.data.funil.find((item) => item.etapa === valor)?.quantidade ?? 0,
+  }));
+  const vendasPorMes = dados.data.vendasMes.map((item) => ({ mes: rotuloMes(item.mes), quantidade: item.quantidade, valor: Number(item.valor_liquido) }));
+  const totalValorPeriodo = dados.data.vendasMes.reduce((total, item) => total + Number(item.valor_liquido), 0);
+  const vendasPorDia = diasSemana.map((rotulo, indice) => ({ dia: rotulo, quantidade: dados.data.vendasDiaSemana.find((item) => item.dia_semana === indice)?.quantidade ?? 0 }));
+
+  return <div className="space-y-6">
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Indicador label="Ciclo médio de venda" value={`${Math.round(Number(dados.data.cicloVenda.dias_medio))} dia(s)`} hint={`${dados.data.cicloVenda.amostras} venda(s) nos últimos 6 meses`} />
+      <Indicador label="Valor líquido vendido" value={`R$ ${totalValorPeriodo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} hint="Últimos 6 meses, vendas confirmadas" />
+    </div>
+    <div>
+      <h3 className="text-sm font-semibold mb-2">Leads por canal e mês</h3>
+      <div className="h-64"><ResponsiveContainer width="100%" height="100%">
+        <BarChart data={leadsPorMes}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="mes" fontSize={12} /><YAxis fontSize={12} allowDecimals={false} /><Tooltip /><Legend />
+          {canaisUnicos.map((canal, i) => <Bar key={canal} dataKey={canal} stackId="canal" fill={coresCanal[i % coresCanal.length]} />)}
+        </BarChart>
+      </ResponsiveContainer></div>
+    </div>
+    <div>
+      <h3 className="text-sm font-semibold mb-2">Funil do mês selecionado</h3>
+      <div className="h-64"><ResponsiveContainer width="100%" height="100%">
+        <BarChart data={funilOrdenado} layout="vertical" margin={{ left: 24 }}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis type="number" fontSize={12} allowDecimals={false} /><YAxis type="category" dataKey="etapa" fontSize={12} width={110} /><Tooltip />
+          <Bar dataKey="quantidade" fill="hsl(var(--primary))" />
+        </BarChart>
+      </ResponsiveContainer></div>
+    </div>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <h3 className="text-sm font-semibold mb-2">Vendas confirmadas por mês</h3>
+        <div className="h-56"><ResponsiveContainer width="100%" height="100%">
+          <BarChart data={vendasPorMes}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="mes" fontSize={12} /><YAxis fontSize={12} allowDecimals={false} /><Tooltip /><Bar dataKey="quantidade" fill="hsl(var(--primary))" /></BarChart>
+        </ResponsiveContainer></div>
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold mb-2">Vendas por dia da semana</h3>
+        <div className="h-56"><ResponsiveContainer width="100%" height="100%">
+          <BarChart data={vendasPorDia}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="dia" fontSize={12} /><YAxis fontSize={12} allowDecimals={false} /><Tooltip /><Bar dataKey="quantidade" fill="hsl(var(--primary))" /></BarChart>
+        </ResponsiveContainer></div>
+      </div>
+    </div>
+    <div>
+      <h3 className="text-sm font-semibold mb-2">Comparativo por vendedor — mês selecionado</h3>
+      {dados.data.vendedorResumo.length === 0 ? <p className="text-sm text-muted-foreground">Sem dados de vendedor no mês selecionado.</p> :
+        <div className="space-y-2">{dados.data.vendedorResumo.map((item) => <div key={item.vendedor_id} className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-sm">
+          <span className="font-medium">{vendedoresConhecidos.get(item.vendedor_id) ?? "Vendedor"}</span>
+          <span className="text-muted-foreground">{item.leads_atribuidos} lead(s) · {item.vendas} venda(s) · R$ {Number(item.valor_liquido).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · {item.atividades} atividade(s)</span>
+        </div>)}</div>}
+    </div>
+  </div>;
 }
