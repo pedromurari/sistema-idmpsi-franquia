@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useViewAs } from "@/contexts/ViewAsContext";
-import { useComercial, type Canal, type Campanha, type Lead, type VendedorPerfil } from "@/hooks/useComercial";
+import { useComercial, type Canal, type Campanha, type Lead, type Venda, type VendedorPerfil } from "@/hooks/useComercial";
 import { useTurmas } from "@/hooks/useFinanceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { formatData, hoje, mesAtual, type Turma } from "@/lib/financeiro";
@@ -44,12 +44,14 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
   const [metaTurma, setMetaTurma] = useState<Turma | null>(null);
   const [novoCanal, setNovoCanal] = useState(false);
   const [novaCampanha, setNovaCampanha] = useState(false);
+  const [vendaLead, setVendaLead] = useState<Lead | null>(null);
   const comercial = useComercial(franquiaId, mes);
   const turmas = useTurmas(franquiaId);
   if (comercial.isPending || turmas.isPending) return <Loader2 aria-label="Carregando comercial" className="h-6 w-6 animate-spin mx-auto" />;
   if (comercial.isError || turmas.isError) return <ErroCarregamento retry={() => { void comercial.refetch(); void turmas.refetch(); }} />;
 
-  const { leads, canais, campanhas, vendedores } = comercial.data;
+  const { leads, canais, campanhas, vendedores, vendas } = comercial.data;
+  const vendaPorLead = new Map(vendas.map((venda) => [venda.lead_id, venda]));
   const lista = leads.filter((lead) =>
     (!somenteAtrasados || (lead.proxima_acao_em !== null && lead.proxima_acao_em < hoje() && !["perdido", "formado", "pos_graduacao"].includes(lead.etapa))) &&
     (!somenteMeusLeads || lead.vendedor_id === user?.id) &&
@@ -144,6 +146,14 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
             {lead.vendedor_id && <p className="text-xs">Vendedor: {nomeVendedor(lead.vendedor_id, vendedores, user)}</p>}
             {souVendedor && !lead.vendedor_id && lead.etapa !== "perdido" &&
               <PegarLeadButton lead={lead} franquiaId={franquiaId} />}
+            {(() => {
+              const venda = vendaPorLead.get(lead.id);
+              if (venda) return <p className="text-xs">Venda: R$ {Number(venda.valor_liquido).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                {" "}· {venda.forma_pagamento} · {venda.status === "confirmada" ? "confirmada" : venda.status === "cancelada" ? "cancelada" : "pendente"}</p>;
+              if (["matricula", "aluno", "formado", "pos_graduacao"].includes(lead.etapa) && (!souVendedor || lead.vendedor_id === user?.id))
+                return <Button variant="outline" size="sm" className="w-full" onClick={() => setVendaLead(lead)}>Registrar venda</Button>;
+              return null;
+            })()}
             <Button variant="outline" size="sm" className="w-full" onClick={() => setHistoricoLead(lead)}>Histórico e contato</Button>
           </Card>)}
         </section>;
@@ -155,6 +165,7 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
     {novaCampanha && <CampanhaDialog franquiaId={franquiaId} canais={canais} fechar={() => setNovaCampanha(false)} />}
     {metaTurma && <MetaDialog key={`${metaTurma.id}:${mes}`} franquiaId={franquiaId} turma={metaTurma} mes={mes}
       valorAtual={comercial.data.metas.find((item) => item.turma_id === metaTurma.id)?.meta_matriculas ?? null} fechar={() => setMetaTurma(null)} />}
+    {vendaLead && <VendaDialog franquiaId={franquiaId} lead={vendaLead} turmas={turmas.data} vendedores={vendedores} fechar={() => setVendaLead(null)} />}
   </div>;
 }
 
@@ -271,6 +282,75 @@ function LeadDialog({ franquiaId, lead, turmas, canais, campanhas, fechar }: { f
       <Campo id="lead-obs" label="Observações"><textarea id="lead-obs" className={`${selectClass} min-h-24`} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} /></Campo>
       {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={fechar}>Cancelar</Button><Button type="submit">{salvando ? "Salvando…" : "Salvar lead"}</Button></div>
+    </fieldset></form>
+  </DialogContent></Dialog>;
+}
+
+function VendaDialog({ franquiaId, lead, turmas, vendedores, fechar }: { franquiaId: string; lead: Lead; turmas: Turma[]; vendedores: VendedorPerfil[]; fechar: () => void }) {
+  const { user } = useAuth();
+  const client = useQueryClient();
+  const souVendedor = user?.role === "vendedor";
+  const [vendedorId, setVendedorId] = useState(lead.vendedor_id ?? user?.id ?? "");
+  const [turmaId, setTurmaId] = useState(lead.turma_id ?? "");
+  const [valorBruto, setValorBruto] = useState("");
+  const [valorLiquido, setValorLiquido] = useState("");
+  const [formaPagamento, setFormaPagamento] = useState("");
+  const [dataVenda, setDataVenda] = useState(hoje());
+  const [observacoes, setObservacoes] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  const opcoesVendedor = user && !vendedores.some((v) => v.id === user.id) && user.role !== "franqueado"
+    ? [{ id: user.id, nome: user.nome }, ...vendedores] : vendedores;
+
+  async function salvar(event: FormEvent) {
+    event.preventDefault();
+    if (salvando) return;
+    setErro("");
+    const bruto = Number(valorBruto.replace(",", "."));
+    const liquido = Number(valorLiquido.replace(",", "."));
+    if (!/^\d+(?:[.,]\d{1,2})?$/.test(valorBruto) || bruto <= 0) return setErro("Informe o valor bruto.");
+    if (!/^\d+(?:[.,]\d{1,2})?$/.test(valorLiquido) || liquido < 0 || liquido > bruto)
+      return setErro("Valor líquido deve ser entre 0 e o valor bruto.");
+    if (formaPagamento.trim().length < 1) return setErro("Informe a forma de pagamento.");
+    if (!dataVenda) return setErro("Informe a data da venda.");
+    if (!vendedorId) return setErro("Selecione o vendedor responsável.");
+    setSalvando(true);
+    const resultado = await supabase.from("franquia_vendas").insert({
+      franquia_id: franquiaId, lead_id: lead.id, vendedor_id: vendedorId,
+      turma_id: turmaId || null, valor_bruto: bruto, valor_liquido: liquido,
+      forma_pagamento: formaPagamento.trim(), data_venda: dataVenda,
+      observacoes: observacoes.trim() || null,
+    }).select("id");
+    setSalvando(false);
+    if (resultado.error) {
+      setErro(resultado.error.code === "23505" ? "Já existe uma venda ativa registrada para este lead." : resultado.error.message);
+      return;
+    }
+    await client.invalidateQueries({ queryKey: ["comercial"] });
+    toast.success("Venda registrada.");
+    fechar();
+  }
+
+  return <Dialog open onOpenChange={(open) => { if (!open && !salvando) fechar(); }}><DialogContent>
+    <DialogHeader><DialogTitle>Registrar venda</DialogTitle>
+      <DialogDescription>{lead.nome} · Ainda não lança no financeiro nem gera ficha de aluno automaticamente.</DialogDescription></DialogHeader>
+    <form onSubmit={(e) => void salvar(e)} className="space-y-4"><fieldset disabled={salvando} className="space-y-4">
+      <div className="grid sm:grid-cols-2 gap-4">
+        {!souVendedor && <Campo id="venda-vendedor" label="Vendedor responsável"><select id="venda-vendedor" className={selectClass} value={vendedorId} onChange={(e) => setVendedorId(e.target.value)}>
+          <option value="">Selecione</option>{opcoesVendedor.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+        </select></Campo>}
+        <Campo id="venda-turma" label="Turma"><select id="venda-turma" className={selectClass} value={turmaId} onChange={(e) => setTurmaId(e.target.value)}>
+          <option value="">Não definida</option>{turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+        </select></Campo>
+        <Campo id="venda-bruto" label="Valor bruto (R$) *"><Input id="venda-bruto" inputMode="decimal" value={valorBruto} onChange={(e) => setValorBruto(e.target.value)} required /></Campo>
+        <Campo id="venda-liquido" label="Valor líquido (R$) *"><Input id="venda-liquido" inputMode="decimal" value={valorLiquido} onChange={(e) => setValorLiquido(e.target.value)} required /></Campo>
+        <Campo id="venda-forma" label="Forma de pagamento *"><Input id="venda-forma" value={formaPagamento} maxLength={60} onChange={(e) => setFormaPagamento(e.target.value)} placeholder="Pix, cartão, boleto..." required /></Campo>
+        <Campo id="venda-data" label="Data da venda *"><Input id="venda-data" type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} required /></Campo>
+      </div>
+      <Campo id="venda-obs" label="Observações"><textarea id="venda-obs" className={`${selectClass} min-h-20`} value={observacoes} maxLength={1000} onChange={(e) => setObservacoes(e.target.value)} /></Campo>
+      <p className="text-xs text-muted-foreground">Valor líquido é o que sobra após a taxa do gateway de pagamento — comissão e faturamento usam esse valor.</p>
+      {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
+      <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={fechar}>Cancelar</Button><Button type="submit">{salvando ? "Salvando…" : "Registrar venda"}</Button></div>
     </fieldset></form>
   </DialogContent></Dialog>;
 }

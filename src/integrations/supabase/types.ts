@@ -961,6 +961,68 @@ export type Database = {
         }
         Relationships: []
       }
+      franquia_vendas: {
+        Row: {
+          created_at: string
+          criado_por: string
+          data_registro: string
+          data_venda: string
+          forma_pagamento: string
+          franquia_id: string
+          id: string
+          lead_id: string
+          observacoes: string | null
+          status: string
+          turma_id: string | null
+          updated_at: string
+          valor_bruto: number
+          valor_liquido: number
+          vendedor_id: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string
+          data_registro?: string
+          data_venda: string
+          forma_pagamento: string
+          franquia_id: string
+          id?: string
+          lead_id: string
+          observacoes?: string | null
+          status?: string
+          turma_id?: string | null
+          updated_at?: string
+          valor_bruto: number
+          valor_liquido: number
+          vendedor_id: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string
+          data_registro?: string
+          data_venda?: string
+          forma_pagamento?: string
+          franquia_id?: string
+          id?: string
+          lead_id?: string
+          observacoes?: string | null
+          status?: string
+          turma_id?: string | null
+          updated_at?: string
+          valor_bruto?: number
+          valor_liquido?: number
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_vendas_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquias: {
         Row: {
           ativo: boolean
