@@ -25,7 +25,7 @@ Convenção de status: 🟢 pronto · 🟡 parcial/em andamento · ⚪ não inic
 
 ---
 
-## 1. Comercial e Captação — Funil do Aluno 🟡
+## 1. Comercial e Captação — Funil do Aluno 🟢
 
 Funil Lead → Atendimento → Entrevista/Aula Experimental → Matrícula → Aluno →
 Formado → Pós-graduação, com origem do lead, score, automação de follow-up,
@@ -34,15 +34,17 @@ gestão de bolsas/descontos, meta vs realizado por turma.
 **Implementado em 02/10/2026:** `/comercial` com leads isolados por unidade,
 etapas e histórico, origem, score manual, próxima ação, proposta de bolsa e
 desconto e meta mensal por turma. Migração 0005 aplicada no Supabase da
-franquia, com RLS e GRANT. Falta automação de follow-up, score automático,
-cadastro real de aluno/matrícula e integração com campanhas.
+franquia, com RLS e GRANT.
 
-**Prioridade (Pedro, 02/10/2026): o comercial entregue está cru perto do
-interno.** A fase A (canais e campanhas por unidade, filtros e indicadores)
-foi entregue em 03/10/2026. Falta paridade em rotina do vendedor, vendedores,
-vendas por vendedor, metas/comissão e dados em gráficos. Especificação completa, em
-fases, em [`docs/COMERCIAL_PARIDADE.md`](docs/COMERCIAL_PARIDADE.md) — ler
-antes de mexer em `/comercial`.
+**Paridade completa em 06/11/2026:** todas as fases de
+[`docs/COMERCIAL_PARIDADE.md`](docs/COMERCIAL_PARIDADE.md) entregues —
+A (canais/campanhas), F-parcial (atividades), B (papel de vendedor e fila de
+leads), C (venda real na matrícula, bruto x líquido), D (meta por vendedor e
+comissão configurável pela administração, fechamento mensal) e E (gráficos
+agregados no banco via RPC `security invoker`: leads por canal/mês, funil,
+vendas por mês/dia da semana, ciclo de venda, comparativo por vendedor).
+Migrations 0011, 0012, 0018-0021. Falta apenas automação de score e a
+integração de "matrícula" com ficha de aluno de verdade (módulo 2).
 
 **Referência no CRM interno:** `TimeComercial.tsx` (funil + campanhas +
 canal de aquisição) e `Pipeline.tsx` já resolvem um funil parecido lá --
