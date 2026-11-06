@@ -17,6 +17,15 @@ franquias e são exclusivos do ADM. Nunca juntar esses dados nem copiar os IDs
 de usuários Auth do CRM interno para este projeto. Ver
 `docs/EXPANSAO_FRANQUIAS.md`.
 
+## Cérebro da franquia (Obsidian)
+
+Existe um cofre do Obsidian em `C:\Users\pedro\Documents\Cerebro Franquia IDM PSI`
+(fora deste repositório) com a estrutura dos 11 módulos da franquia, status
+real de cada um e se é escopo da franqueadora, do franqueado ou dos dois.
+Antes de tomar decisão sobre prioridade entre módulos, leia esse cofre. Há
+um cofre irmão em `C:\Users\pedro\Documents\Cerebro Onze Digital`, do
+`onze-digital-main` — não misturar os dois.
+
 ## Não é o mesmo projeto do CRM interno
 
 Existe um outro repositório, **local, nesta mesma máquina**, em

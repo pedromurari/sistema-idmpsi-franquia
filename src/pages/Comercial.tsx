@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useViewAs } from "@/contexts/ViewAsContext";
-import { useComercial, type Canal, type Campanha, type Lead } from "@/hooks/useComercial";
+import { useComercial, type Canal, type Campanha, type Lead, type VendedorPerfil } from "@/hooks/useComercial";
 import { useTurmas } from "@/hooks/useFinanceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { formatData, hoje, mesAtual, type Turma } from "@/lib/financeiro";
@@ -32,11 +32,13 @@ export default function Comercial() {
 
 function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
   const { user } = useAuth();
+  const souVendedor = user?.role === "vendedor";
   const [mes, setMes] = useState(mesAtual());
   const [busca, setBusca] = useState("");
   const [canalFiltro, setCanalFiltro] = useState("todos");
   const [campanhaFiltro, setCampanhaFiltro] = useState("todas");
   const [somenteAtrasados, setSomenteAtrasados] = useState(false);
+  const [somenteMeusLeads, setSomenteMeusLeads] = useState(souVendedor);
   const [historicoLead, setHistoricoLead] = useState<Lead | null>(null);
   const [editando, setEditando] = useState<Lead | null | undefined>();
   const [metaTurma, setMetaTurma] = useState<Turma | null>(null);
@@ -47,9 +49,10 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
   if (comercial.isPending || turmas.isPending) return <Loader2 aria-label="Carregando comercial" className="h-6 w-6 animate-spin mx-auto" />;
   if (comercial.isError || turmas.isError) return <ErroCarregamento retry={() => { void comercial.refetch(); void turmas.refetch(); }} />;
 
-  const { leads, canais, campanhas } = comercial.data;
+  const { leads, canais, campanhas, vendedores } = comercial.data;
   const lista = leads.filter((lead) =>
     (!somenteAtrasados || (lead.proxima_acao_em !== null && lead.proxima_acao_em < hoje() && !["perdido", "formado", "pos_graduacao"].includes(lead.etapa))) &&
+    (!somenteMeusLeads || lead.vendedor_id === user?.id) &&
     (canalFiltro === "todos" || lead.canal_id === canalFiltro || (canalFiltro === "sem-canal" && !lead.canal_id)) &&
     (campanhaFiltro === "todas" || lead.campanha_id === campanhaFiltro) &&
     `${lead.nome} ${lead.email ?? ""} ${lead.telefone ?? ""}`.toLocaleLowerCase("pt-BR")
@@ -117,8 +120,12 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
       </div>
     </Card>
     <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground"><span>{lista.length} contato(s) no filtro atual</span>
-      <Button size="sm" variant={somenteAtrasados ? "default" : "outline"} onClick={() => setSomenteAtrasados(!somenteAtrasados)}>
-        Retornos atrasados · {atrasados}</Button></div>
+      <div className="flex gap-2">
+        {souVendedor && <Button size="sm" variant={somenteMeusLeads ? "default" : "outline"} onClick={() => setSomenteMeusLeads(!somenteMeusLeads)}>
+          Meus leads · {leads.filter((lead) => lead.vendedor_id === user?.id).length}</Button>}
+        <Button size="sm" variant={somenteAtrasados ? "default" : "outline"} onClick={() => setSomenteAtrasados(!somenteAtrasados)}>
+          Retornos atrasados · {atrasados}</Button>
+      </div></div>
     <div className="flex gap-3 overflow-x-auto pb-3" aria-label="Funil comercial">
       {etapas.map(([valor, titulo]) => {
         const itens = lista.filter((lead) => lead.etapa === valor);
@@ -134,6 +141,9 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
             {lead.turma_id && <p className="text-xs">{turmas.data.find((t) => t.id === lead.turma_id)?.nome ?? "Turma vinculada"}</p>}
             {lead.proxima_acao_em && <p className={`text-xs ${lead.proxima_acao_em < hoje() ? "text-destructive" : "text-muted-foreground"}`}>Próxima ação: {formatData(lead.proxima_acao_em)} · {lead.proxima_acao}</p>}
             {lead.score !== null && <p className="text-xs text-muted-foreground">Score: {lead.score}/100</p>}
+            {lead.vendedor_id && <p className="text-xs">Vendedor: {nomeVendedor(lead.vendedor_id, vendedores, user)}</p>}
+            {souVendedor && !lead.vendedor_id && lead.etapa !== "perdido" &&
+              <PegarLeadButton lead={lead} franquiaId={franquiaId} />}
             <Button variant="outline" size="sm" className="w-full" onClick={() => setHistoricoLead(lead)}>Histórico e contato</Button>
           </Card>)}
         </section>;
@@ -146,6 +156,32 @@ function ComercialUnidade({ franquiaId }: { franquiaId: string }) {
     {metaTurma && <MetaDialog key={`${metaTurma.id}:${mes}`} franquiaId={franquiaId} turma={metaTurma} mes={mes}
       valorAtual={comercial.data.metas.find((item) => item.turma_id === metaTurma.id)?.meta_matriculas ?? null} fechar={() => setMetaTurma(null)} />}
   </div>;
+}
+
+function nomeVendedor(vendedorId: string, vendedores: VendedorPerfil[], user: ReturnType<typeof useAuth>["user"]) {
+  if (user?.id === vendedorId) return user.nome;
+  return vendedores.find((v) => v.id === vendedorId)?.nome ?? "Atribuído";
+}
+
+function PegarLeadButton({ lead, franquiaId }: { lead: Lead; franquiaId: string }) {
+  const { user } = useAuth();
+  const client = useQueryClient();
+  const [salvando, setSalvando] = useState(false);
+  async function pegar() {
+    if (salvando || !user) return;
+    setSalvando(true);
+    const resultado = await supabase.from("franquia_leads")
+      .update({ vendedor_id: user.id })
+      .eq("id", lead.id).eq("franquia_id", franquiaId)
+      .eq("updated_at", lead.updated_at).is("vendedor_id", null).select("id");
+    setSalvando(false);
+    if (resultado.error) return toast.error(resultado.error.message);
+    if (!resultado.data?.length) return toast.error("Esse lead já foi pego por outro vendedor.");
+    await client.invalidateQueries({ queryKey: ["comercial"] });
+    toast.success("Lead atribuído a você.");
+  }
+  return <Button size="sm" className="w-full" disabled={salvando} onClick={() => void pegar()}>
+    {salvando ? "Pegando…" : "Pegar lead"}</Button>;
 }
 
 function LeadDialog({ franquiaId, lead, turmas, canais, campanhas, fechar }: { franquiaId: string; lead: Lead | null; turmas: Turma[]; canais: Canal[]; campanhas: Campanha[]; fechar: () => void }) {

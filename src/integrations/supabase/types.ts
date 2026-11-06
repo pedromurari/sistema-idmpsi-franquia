@@ -510,6 +510,7 @@ export type Database = {
           telefone: string | null
           turma_id: string | null
           updated_at: string
+          vendedor_id: string | null
         }
         Insert: {
           bolsa_percentual?: number
@@ -532,6 +533,7 @@ export type Database = {
           telefone?: string | null
           turma_id?: string | null
           updated_at?: string
+          vendedor_id?: string | null
         }
         Update: {
           bolsa_percentual?: number
@@ -554,6 +556,7 @@ export type Database = {
           telefone?: string | null
           turma_id?: string | null
           updated_at?: string
+          vendedor_id?: string | null
         }
         Relationships: [
           {

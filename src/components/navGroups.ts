@@ -12,7 +12,10 @@ export function navGroups(role: FranquiaRole, unidadeNome?: string | null) {
     { to: "/notas", label: "Notas Fiscais", icon: FileText },
     { to: "/social-unidade", label: "Social mídia", icon: Megaphone },
   ];
-  if (role === "franqueado") return [{ titulo: "Minha unidade", itens: unidade }];
+  // vendedor cai no mesmo menu de unidade que franqueado -- só franqueador
+  // enxerga a área central da rede. Checagem explícita (não "else"), pra um
+  // terceiro papel futuro não herdar o menu da franqueadora por acidente.
+  if (role !== "franqueador") return [{ titulo: "Minha unidade", itens: unidade }];
   return [
     { titulo: "Franqueadora", itens: [
       { to: "/rede", label: "Visão da rede", icon: LayoutDashboard },

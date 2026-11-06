@@ -3,9 +3,10 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 
-// Só 2 papéis aqui, de propósito -- esse sistema é enxuto (financeiro do
-// franqueado), não herda a matriz de permissões do CRM interno.
-export type FranquiaRole = 'franqueador' | 'franqueado';
+// Papéis enxutos de propósito -- esse sistema não herda a matriz de
+// permissões do CRM interno. 'vendedor' (fase B do comercial) enxerga só a
+// própria unidade, igual franqueado, mas só os próprios leads + fila livre.
+export type FranquiaRole = 'franqueador' | 'franqueado' | 'vendedor';
 
 export interface AppUser {
   id: string;
@@ -60,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const role = (roleData?.role as FranquiaRole) || 'franqueado';
     // Sem vínculo não há escopo válido para navegar; a RLS também não libera unidade.
-    if (role === 'franqueado' && !profile.franquia_id) {
-      console.error('Franqueado sem unidade vinculada -- login bloqueado.');
+    if ((role === 'franqueado' || role === 'vendedor') && !profile.franquia_id) {
+      console.error('Franqueado/vendedor sem unidade vinculada -- login bloqueado.');
       await supabase.auth.signOut();
       return null;
     }

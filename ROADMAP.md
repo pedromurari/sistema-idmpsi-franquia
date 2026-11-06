@@ -16,6 +16,11 @@ de captação de franquias e área de membros por unidade. Veja
 **Antes de implementar qualquer módulo, leia `AGENTS.md`** (convenções de
 segurança, RLS+GRANT, o que reaproveitar do CRM interno).
 
+Para a trilha específica de operação de cada unidade franqueada, consulte
+[`docs/FRENTE_FRANQUEADO.md`](docs/FRENTE_FRANQUEADO.md). Ela distingue o que
+o portal já executa do fluxo ainda ausente de equipe, venda, matrícula, aluno
+e cobrança.
+
 Convenção de status: 🟢 pronto · 🟡 parcial/em andamento · ⚪ não iniciado.
 
 ---

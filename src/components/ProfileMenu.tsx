@@ -26,7 +26,7 @@ export function ProfileMenu() {
           <button className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-accent text-left">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium leading-tight">{user?.nome}</p>
-              <p className="text-xs text-muted-foreground leading-tight">{user?.role === 'franqueador' ? 'Franqueador' : 'Franqueado'}</p>
+              <p className="text-xs text-muted-foreground leading-tight">{user?.role === 'franqueador' ? 'Franqueador' : user?.role === 'vendedor' ? 'Vendedor' : 'Franqueado'}</p>
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
