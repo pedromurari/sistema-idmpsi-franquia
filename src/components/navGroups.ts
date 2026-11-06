@@ -1,4 +1,4 @@
-import { Building2, Calculator, FileText, GraduationCap, LayoutDashboard, Megaphone, MessageCircle, MessageSquarePlus, TrendingUp, UsersRound } from "lucide-react";
+import { Building2, Calculator, FileText, GraduationCap, LayoutDashboard, Megaphone, MessageCircle, MessageSquarePlus, TrendingUp, UserRound, UsersRound } from "lucide-react";
 import type { FranquiaRole } from "@/contexts/AuthContext";
 
 export const rotaFranqueadora = (path: string) => ["/rede", "/unidades", "/expansao", "/social-franqueadora", "/sugestoes", "/whatsapp"].includes(path);
@@ -8,6 +8,7 @@ export function navGroups(role: FranquiaRole, unidadeNome?: string | null) {
     { to: "/dashboard", label: "Painel da unidade", icon: LayoutDashboard },
     { to: "/turmas", label: "Turmas", icon: GraduationCap },
     { to: "/comercial", label: "Comercial", icon: UsersRound },
+    { to: "/alunos", label: "Alunos", icon: UserRound },
     { to: "/dre", label: "Financeiro", icon: Calculator },
     { to: "/notas", label: "Notas Fiscais", icon: FileText },
     { to: "/social-unidade", label: "Social mídia", icon: Megaphone },

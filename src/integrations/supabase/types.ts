@@ -72,6 +72,80 @@ export type Database = {
         }
         Relationships: []
       }
+      franquia_alunos: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          criado_por: string
+          data_conclusao_prevista: string | null
+          data_matricula: string
+          data_nascimento: string | null
+          email: string | null
+          endereco: string | null
+          franquia_id: string
+          id: string
+          lead_id: string | null
+          motivo_status: string | null
+          nome: string
+          observacoes: string | null
+          status: string
+          telefone: string | null
+          turma_id: string | null
+          updated_at: string
+          venda_id: string | null
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          criado_por?: string
+          data_conclusao_prevista?: string | null
+          data_matricula?: string
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          franquia_id: string
+          id?: string
+          lead_id?: string | null
+          motivo_status?: string | null
+          nome: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          turma_id?: string | null
+          updated_at?: string
+          venda_id?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          criado_por?: string
+          data_conclusao_prevista?: string | null
+          data_matricula?: string
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          franquia_id?: string
+          id?: string
+          lead_id?: string | null
+          motivo_status?: string | null
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          turma_id?: string | null
+          updated_at?: string
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_alunos_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquia_campanhas: {
         Row: {
           ativo: boolean

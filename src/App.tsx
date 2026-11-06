@@ -11,6 +11,7 @@ import DreUnidade from '@/pages/DreUnidade';
 import NotasFiscais from '@/pages/NotasFiscais';
 import Unidades from '@/pages/Unidades';
 import Turmas from '@/pages/Turmas';
+import Alunos from '@/pages/Alunos';
 import Comercial from '@/pages/Comercial';
 import ExpansaoFranquias from '@/pages/ExpansaoFranquias';
 import CapturaFranquia from '@/pages/CapturaFranquia';
@@ -65,6 +66,7 @@ function AppRoutes() {
       <Route path="/dre" element={<ProtectedRoute><DreUnidade /></ProtectedRoute>} />
       <Route path="/turmas" element={<ProtectedRoute><Turmas /></ProtectedRoute>} />
       <Route path="/comercial" element={<ProtectedRoute><Comercial /></ProtectedRoute>} />
+      <Route path="/alunos" element={<ProtectedRoute><Alunos /></ProtectedRoute>} />
       <Route path="/expansao" element={<ProtectedRoute somenteFranqueador><ExpansaoFranquias /></ProtectedRoute>} />
       <Route path="/social-franqueadora" element={<ProtectedRoute somenteFranqueador><SocialMidia escopo="franqueadora" /></ProtectedRoute>} />
       <Route path="/sugestoes" element={<ProtectedRoute somenteFranqueador><Sugestoes /></ProtectedRoute>} />
