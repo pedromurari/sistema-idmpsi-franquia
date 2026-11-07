@@ -1,4 +1,4 @@
-import { Building2, Calculator, FileText, GraduationCap, LayoutDashboard, Megaphone, MessageCircle, MessageSquarePlus, TrendingUp, UserRound, UsersRound } from "lucide-react";
+import { Building2, Calculator, CheckSquare, FileText, GraduationCap, LayoutDashboard, Megaphone, MessageCircle, MessageSquarePlus, TrendingUp, UserRound, UsersRound } from "lucide-react";
 import type { FranquiaRole } from "@/contexts/AuthContext";
 
 export const rotaFranqueadora = (path: string) => ["/rede", "/unidades", "/expansao", "/social-franqueadora", "/sugestoes", "/whatsapp"].includes(path);
@@ -12,6 +12,7 @@ export function navGroups(role: FranquiaRole, unidadeNome?: string | null) {
     { to: "/dre", label: "Financeiro", icon: Calculator },
     { to: "/notas", label: "Notas Fiscais", icon: FileText },
     { to: "/social-unidade", label: "Social mídia", icon: Megaphone },
+    { to: "/tarefas", label: "Operacional", icon: CheckSquare },
   ];
   // vendedor cai no mesmo menu de unidade que franqueado -- só franqueador
   // enxerga a área central da rede. Checagem explícita (não "else"), pra um

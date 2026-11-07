@@ -970,6 +970,56 @@ export type Database = {
         }
         Relationships: []
       }
+      franquia_tarefas: {
+        Row: {
+          created_at: string
+          criado_por: string
+          descricao: string | null
+          franquia_id: string
+          id: string
+          prazo: string | null
+          prioridade: string
+          responsavel_id: string | null
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string
+          descricao?: string | null
+          franquia_id: string
+          id?: string
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string
+          descricao?: string | null
+          franquia_id?: string
+          id?: string
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_tarefas_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquia_turmas: {
         Row: {
           ativo: boolean
