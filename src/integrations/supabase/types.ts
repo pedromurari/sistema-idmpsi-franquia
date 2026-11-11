@@ -824,6 +824,65 @@ export type Database = {
           },
         ]
       }
+      franquia_royalties_fechamento: {
+        Row: {
+          base: string
+          competencia: string
+          created_at: string
+          fechado_em: string
+          fechado_por: string
+          franquia_id: string
+          id: string
+          observacoes: string | null
+          pago_em: string | null
+          percentual_aplicado: number
+          receita_base: number
+          status: string
+          updated_at: string
+          valor_royalties: number
+        }
+        Insert: {
+          base: string
+          competencia: string
+          created_at?: string
+          fechado_em?: string
+          fechado_por: string
+          franquia_id: string
+          id?: string
+          observacoes?: string | null
+          pago_em?: string | null
+          percentual_aplicado: number
+          receita_base: number
+          status?: string
+          updated_at?: string
+          valor_royalties: number
+        }
+        Update: {
+          base?: string
+          competencia?: string
+          created_at?: string
+          fechado_em?: string
+          fechado_por?: string
+          franquia_id?: string
+          id?: string
+          observacoes?: string | null
+          pago_em?: string | null
+          percentual_aplicado?: number
+          receita_base?: number
+          status?: string
+          updated_at?: string
+          valor_royalties?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_royalties_fechamento_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquia_social_copies: {
         Row: {
           briefing: string
@@ -1363,6 +1422,10 @@ export type Database = {
       franquia_fecha_comissao: {
         Args: { p_vendedor_id: string; p_competencia: string }
         Returns: Database["public"]["Tables"]["franquia_comissoes_fechamento"]["Row"]
+      }
+      franquia_fecha_royalties: {
+        Args: { p_franquia_id: string; p_competencia: string }
+        Returns: Database["public"]["Tables"]["franquia_royalties_fechamento"]["Row"]
       }
       franquia_is_franqueador: { Args: never; Returns: boolean }
       franquia_is_vendedor: { Args: never; Returns: boolean }

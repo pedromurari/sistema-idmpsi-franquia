@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Database } from "@/integrations/supabase/types";
 import {
   limitesMes,
   todasPaginas,
@@ -8,6 +9,8 @@ import {
   type RegraRoyalties,
   type Turma,
 } from "@/lib/financeiro";
+
+export type FechamentoRoyalties = Database["public"]["Tables"]["franquia_royalties_fechamento"]["Row"];
 
 export function useTurmas(franquiaId: string) {
   const { user } = useAuth();
@@ -55,7 +58,7 @@ export function useFinanceiro(franquiaId: string, mes: string) {
           return { ...linha, tipo: linha.tipo };
         });
       };
-      const [dre, caixa, regra] = await Promise.all([
+      const [dre, caixa, regra, fechamento] = await Promise.all([
         carregar("competencia"),
         carregar("data_liquidacao"),
         supabase
@@ -65,9 +68,20 @@ export function useFinanceiro(franquiaId: string, mes: string) {
           .eq("competencia", inicio)
           .abortSignal(signal)
           .maybeSingle(),
+        supabase
+          .from("franquia_royalties_fechamento")
+          .select("*")
+          .eq("franquia_id", franquiaId)
+          .eq("competencia", inicio)
+          .abortSignal(signal)
+          .maybeSingle(),
       ]);
       if (regra.error) throw new Error(regra.error.message);
-      return { dre, caixa, regra: regra.data as RegraRoyalties | null };
+      if (fechamento.error) throw new Error(fechamento.error.message);
+      return {
+        dre, caixa, regra: regra.data as RegraRoyalties | null,
+        fechamento: fechamento.data as FechamentoRoyalties | null,
+      };
     },
     enabled: !!user && !!franquiaId,
   });

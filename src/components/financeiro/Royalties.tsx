@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { FechamentoRoyalties } from "@/hooks/useFinanceiro";
 import {
   calcularRoyalties,
   formatCurrency,
@@ -29,18 +30,47 @@ export function Royalties({
   regra,
   dre,
   caixa,
+  fechamento,
 }: {
   franquiaId: string;
   mes: string;
   regra: RegraRoyalties | null;
   dre: Lancamento[];
   caixa: Lancamento[];
+  fechamento: FechamentoRoyalties | null;
 }) {
   const { user } = useAuth();
+  const client = useQueryClient();
   const [aberto, setAberto] = useState(false);
+  const [fechando, setFechando] = useState(false);
+  const [marcando, setMarcando] = useState(false);
   const receita = regra
     ? resumoFinanceiro(regra.base === "caixa" ? caixa : dre).receita
     : 0;
+
+  async function fecharRoyalties() {
+    if (fechando) return;
+    setFechando(true);
+    const resultado = await supabase.rpc("franquia_fecha_royalties", {
+      p_franquia_id: franquiaId, p_competencia: `${mes}-01`,
+    });
+    setFechando(false);
+    if (resultado.error) return toast.error(resultado.error.message);
+    await client.invalidateQueries({ queryKey: ["financeiro"] });
+    toast.success("Royalties do mês fechados.");
+  }
+
+  async function marcarPago() {
+    if (marcando || !fechamento) return;
+    setMarcando(true);
+    const resultado = await supabase.from("franquia_royalties_fechamento")
+      .update({ status: "pago" }).eq("id", fechamento.id);
+    setMarcando(false);
+    if (resultado.error) return toast.error(resultado.error.message);
+    await client.invalidateQueries({ queryKey: ["financeiro"] });
+    toast.success("Royalties marcados como pagos.");
+  }
+
   return (
     <Card className="p-5 space-y-3 border-primary/20">
       <div className="flex flex-wrap justify-between gap-3">
@@ -84,8 +114,40 @@ export function Royalties({
       <p className="text-xs text-muted-foreground">
         Estimativa sobre a soma das receitas, sem dedução de despesas. Não gera
         cobrança, baixa ou despesa automática. Pode mudar ao corrigir
-        lançamentos; não representa fechamento ou repasse confirmado.
+        lançamentos até o mês ser fechado abaixo.
       </p>
+      <div className="flex flex-wrap items-center gap-3 border-t pt-3">
+        {fechamento ? (
+          <>
+            <div>
+              <p className="font-semibold tabular-nums">
+                {formatCurrency(Number(fechamento.valor_royalties))}
+                {" "}
+                <span className="font-normal text-sm text-muted-foreground">
+                  · {fechamento.status === "pago" ? "pago" : "fechado"}
+                  {" em "}{new Date(fechamento.fechado_em).toLocaleDateString("pt-BR")}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Repasse oficial do mês — {Number(fechamento.percentual_aplicado).toLocaleString("pt-BR")}%
+                {" "}sobre {formatCurrency(Number(fechamento.receita_base))}, travado no fechamento.
+              </p>
+            </div>
+            {user?.role === "franqueador" && fechamento.status === "fechado" && (
+              <Button size="sm" variant="outline" disabled={marcando} onClick={() => void marcarPago()}>
+                {marcando ? "Salvando…" : "Marcar como pago"}
+              </Button>
+            )}
+          </>
+        ) : (
+          user?.role === "franqueador" && (
+            <Button size="sm" disabled={!regra || fechando} title={!regra ? "Configure a regra do mês primeiro" : undefined}
+              onClick={() => void fecharRoyalties()}>
+              {fechando ? "Fechando…" : "Fechar royalties do mês"}
+            </Button>
+          )
+        )}
+      </div>
       {aberto && (
         <RegraDialog
           franquiaId={franquiaId}

@@ -312,6 +312,7 @@ function FinanceiroUnidade({ franquiaId }: { franquiaId: string }) {
               regra={dados.regra}
               dre={dados.dre}
               caixa={dados.caixa}
+              fechamento={dados.fechamento}
             />
           </>
         )
