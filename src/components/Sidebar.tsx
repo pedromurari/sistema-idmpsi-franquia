@@ -41,25 +41,30 @@ export function Sidebar() {
 
       <nav className={cn('space-y-0.5 flex-1 pt-4', collapsed ? 'px-2' : 'px-3')}>
         {grupos.map((grupo, index) => <div key={grupo.titulo} className={index ? 'mt-4 border-t pt-4' : ''}>
-          {!collapsed && <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{grupo.titulo}</p>}
+          {!collapsed && <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-primary/80">{grupo.titulo}</p>}
           {collapsed && <span className="sr-only">{grupo.titulo}</span>}
-          <div className="space-y-0.5">{grupo.itens.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            title={collapsed ? item.label : undefined}
-            className={({ isActive }) =>
-              cn(
-                'w-full flex items-center rounded transition-all duration-300 text-left text-sm font-semibold',
-                collapsed ? 'justify-center px-2 py-2.5' : 'gap-2.5 px-3 py-2.5',
-                isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-primary/5 hover:text-primary'
-              )
-            }
-          >
-            <item.icon className="h-4.5 w-4.5 flex-shrink-0" />
-            {!collapsed && <span className="flex-1">{item.label}</span>}
-          </NavLink>
-        ))}</div></div>)}
+          {grupo.secoes.map((secao) => <div key={secao.titulo}>
+            {!collapsed && <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{secao.titulo}</p>}
+            {collapsed && <span className="sr-only">{secao.titulo}</span>}
+            <div className="space-y-0.5">{secao.itens.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              title={collapsed ? item.label : undefined}
+              className={({ isActive }) =>
+                cn(
+                  'w-full flex items-center rounded transition-all duration-300 text-left text-sm font-semibold',
+                  collapsed ? 'justify-center px-2 py-2.5' : 'gap-2.5 px-3 py-2.5',
+                  isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-primary/5 hover:text-primary'
+                )
+              }
+            >
+              <item.icon className="h-4.5 w-4.5 flex-shrink-0" />
+              {!collapsed && <span className="flex-1">{item.label}</span>}
+            </NavLink>
+          ))}</div>
+          </div>)}
+        </div>)}
         {user?.role === 'franqueador' && !viewAsId && !collapsed && <div className="mt-4 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 text-xs">
           <p className="font-semibold">Operação de uma unidade</p>
           <p className="mt-1 text-muted-foreground">Escolha uma unidade para abrir Turmas, Comercial, Financeiro e Social mídia local.</p>
