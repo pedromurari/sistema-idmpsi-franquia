@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,19 @@ export default function Login() {
     const r = await login(email, senha);
     setEnviando(false);
     if (!r.success) toast.error(r.error || 'Não foi possível entrar.');
+  };
+
+  const recuperarSenha = async () => {
+    if (!email.trim()) return toast.error('Escreva seu e-mail acima primeiro.');
+    setEnviando(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/redefinir-senha`,
+    });
+    setEnviando(false);
+    // Resposta igual com e sem cadastro, de propósito: dizer "esse e-mail não
+    // existe" entregaria pra qualquer um quem tem acesso ao portal.
+    if (error) return toast.error(error.message);
+    toast.success('Se esse e-mail tiver acesso, o link de redefinição chega em instantes. Confira o spam.');
   };
 
   return (
@@ -57,6 +71,12 @@ export default function Login() {
           >
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Entrar'}
           </Button>
+          <button
+            type="button" onClick={() => void recuperarSenha()} disabled={enviando}
+            className="text-xs text-neutral-400 hover:text-neutral-200 underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            Esqueci minha senha
+          </button>
         </form>
       </Card>
     </div>

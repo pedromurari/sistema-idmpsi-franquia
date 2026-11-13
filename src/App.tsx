@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ViewAsProvider, useViewAs } from '@/contexts/ViewAsContext';
 import { Layout } from '@/components/Layout';
 import Login from '@/pages/Login';
+import RedefinirSenha from '@/pages/RedefinirSenha';
 import MfaGate from '@/pages/MfaGate';
 import Dashboard from '@/pages/Dashboard';
 import DreUnidade from '@/pages/DreUnidade';
@@ -61,6 +62,9 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={loading ? null : user ? <HomeRedirect /> : <Login />} />
       <Route path="/quero-ser-franqueado" element={<CapturaFranquia />} />
+      {/* Fora do ProtectedRoute: quem vem do e-mail ainda não passou pelo 2FA
+          e precisa definir a senha antes de qualquer coisa. */}
+      <Route path="/redefinir-senha" element={<RedefinirSenha />} />
       <Route path="/rede" element={<ProtectedRoute somenteFranqueador><Dashboard escopo="rede" /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><PainelUnidade /></ProtectedRoute>} />
       <Route path="/unidades" element={<ProtectedRoute somenteFranqueador><Unidades /></ProtectedRoute>} />
