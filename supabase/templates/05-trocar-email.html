@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>Confirme a troca de e-mail</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;-webkit-font-smoothing:antialiased;">
+<div style="display:none;font-size:1px;color:#f4f4f5;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">Confirme o novo endere&ccedil;o da sua conta.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
+<tr><td align="center" style="padding:32px 16px;">
+
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:10px;">
+  <tr><td align="center" style="background-color:#171717;padding:28px 24px;border-radius:9px 9px 0 0;">
+    <img src="https://sistema.idmpsifranquia.com/email-logo.png" width="200" alt="IDM PSI &mdash; Desperta sua mente" style="display:block;width:200px;max-width:70%;height:auto;border:0;outline:none;text-decoration:none;">
+    <div style="margin:14px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#a1a1aa;">Portal do Franqueado</div>
+  </td></tr>
+
+  <tr><td style="padding:34px 34px 0;">
+    <h1 style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:21px;line-height:1.3;font-weight:bold;color:#171717;">Confirme a troca de e-mail</h1>
+    <p style="margin:0px 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#27272a;">Pediram para trocar o e-mail da sua conta de <strong>{{ .Email }}</strong> para <strong>{{ .NewEmail }}</strong>.</p><p style="margin:0px 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#27272a;">Se foi voc&ecirc;, confirme no bot&atilde;o abaixo.</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 0;"><tr><td style="background-color:#fafafa;border-left:3px solid #f8b400;padding:14px 16px;border-radius:0 6px 6px 0;"><p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#52525b;"><strong>N&atilde;o foi voc&ecirc;?</strong> N&atilde;o clique e avise a gente em contato@idmpsifranquia.com. Enquanto n&atilde;o houver confirma&ccedil;&atilde;o, o e-mail da conta continua o mesmo.</p></td></tr></table>
+  </td></tr>
+
+  <tr><td style="padding:26px 34px 0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;"><tr><td align="center" bgcolor="#f8b400" style="border-radius:6px;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 34px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#171717;text-decoration:none;border-radius:6px;">Confirmar novo e-mail</a></td></tr></table><p style="margin:22px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#71717a;text-align:center;">Se o bot&atilde;o n&atilde;o funcionar, copie e cole este endere&ccedil;o no navegador:<br><span style="color:#52525b;word-break:break-all;">{{ .ConfirmationURL }}</span></p></td></tr>
+
+  <tr><td style="padding:30px 34px 34px;">
+    <div style="height:1px;background-color:#e4e4e7;font-size:0;line-height:0;">&nbsp;</div>
+    <p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#71717a;">
+      Mensagem autom&aacute;tica de acesso e seguran&ccedil;a da sua conta no portal.<br>
+      D&uacute;vidas? Responda este e-mail ou fale com <a href="mailto:contato@idmpsifranquia.com" style="color:#71717a;">contato@idmpsifranquia.com</a>.
+    </p>
+  </td></tr>
+</table>
+
+<p style="margin:20px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+  IDM PSI Franquia &middot; sistema.idmpsifranquia.com<br>
+  Nunca pedimos sua senha por e-mail, telefone ou WhatsApp.
+</p>
+
+</td></tr>
+</table>
+</body>
+</html>

@@ -46,7 +46,13 @@ export default function RedefinirSenha() {
       // uma sessão. É o caminho que o nosso modelo de e-mail usa.
       const tokenHash = params.get('token_hash');
       if (tokenHash) {
-        const { error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: tokenHash });
+        // O convite de franqueado novo chega com type=invite e o "esqueci
+        // minha senha" com type=recovery -- as duas caem nesta mesma tela.
+        // Lista fechada de propósito: o type vem da URL, então aceitar
+        // qualquer valor deixaria a pessoa escolher o tipo de token a validar.
+        const tipoUrl = params.get('type');
+        const tipo = tipoUrl === 'invite' ? 'invite' : 'recovery';
+        const { error } = await supabase.auth.verifyOtp({ type: tipo, token_hash: tokenHash });
         if (!ativo) return;
         if (error) {
           setMotivo('Este link de redefinição venceu ou já foi usado.');
