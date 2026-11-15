@@ -14,6 +14,15 @@ export const SOCIAL_TIPOS = [
   { id: "post", label: "Post simples" },
 ] as const;
 
+// Categoria de conteúdo -- eixo diferente de `tipo` (que é o formato). Separa
+// corte curto, vídeo longo de YouTube e vídeo de anúncio, pra poder filtrar
+// o quadro por cada um.
+export const SOCIAL_CATEGORIAS = [
+  { id: "corte", label: "Cortes" },
+  { id: "longo", label: "Longos (YouTube)" },
+  { id: "anuncio", label: "Anúncios" },
+] as const;
+
 export function proximosCortes(inicio: Date, quantidade = 10): string[] {
   const primeiro = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
   const diasAteSegunda = (8 - primeiro.getDay()) % 7 || 7;

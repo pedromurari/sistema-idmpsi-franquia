@@ -359,13 +359,22 @@ export type Database = {
           email: string | null
           estado: string | null
           fase: string
+          fbclid: string | null
+          gclid: string | null
           id: string
+          landing_path: string | null
           nome: string
           observacoes: string | null
           origem: string
           origem_id: string | null
+          referrer_host: string | null
           responsavel_id: string | null
           updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -377,13 +386,22 @@ export type Database = {
           email?: string | null
           estado?: string | null
           fase?: string
+          fbclid?: string | null
+          gclid?: string | null
           id?: string
+          landing_path?: string | null
           nome: string
           observacoes?: string | null
           origem?: string
           origem_id?: string | null
+          referrer_host?: string | null
           responsavel_id?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -395,13 +413,22 @@ export type Database = {
           email?: string | null
           estado?: string | null
           fase?: string
+          fbclid?: string | null
+          gclid?: string | null
           id?: string
+          landing_path?: string | null
           nome?: string
           observacoes?: string | null
           origem?: string
           origem_id?: string | null
+          referrer_host?: string | null
           responsavel_id?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           whatsapp?: string | null
         }
         Relationships: [
@@ -930,6 +957,7 @@ export type Database = {
       }
       franquia_social_posts: {
         Row: {
+          categoria: string
           created_at: string
           criado_por: string
           data_publicacao: string | null
@@ -946,6 +974,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          categoria?: string
           created_at?: string
           criado_por?: string
           data_publicacao?: string | null
@@ -962,6 +991,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          categoria?: string
           created_at?: string
           criado_por?: string
           data_publicacao?: string | null

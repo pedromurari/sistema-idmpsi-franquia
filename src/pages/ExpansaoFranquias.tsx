@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Loader2, Plus, Search, MessageCircle, Phone, Pencil, Archive, ExternalLink } from "lucide-react";
+import { BarChart3, Loader2, Plus, Search, MessageCircle, Phone, Pencil, Archive, ExternalLink, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,29 @@ const FASES = [
   { id: "fechado", nome: "Fechado", cor: "bg-green-600" },
   { id: "perdido", nome: "Perdido", cor: "bg-red-600" },
 ] as const;
+
+// Rótulo curto de origem pro Kanban/tabela. Prioriza utm_campaign (o que a
+// agência de tráfego vai reconhecer) sobre utm_source; sem nenhum dos dois,
+// cai no `origem` bruto gravado no cadastro.
+function rotuloOrigem(lead: Lead): string {
+  if (lead.utm_campaign) return lead.utm_campaign;
+  if (lead.utm_source) return lead.utm_source;
+  if (lead.origem === "captura") return "Direto/orgânico";
+  if (lead.origem === "crm_onze") return "CRM Onze";
+  return "Manual";
+}
+
+// Agrupa por campanha/fonte pra ver, sem precisar de token do Meta ainda,
+// quantos leads cada campanha trouxe -- cruzar com o gasto da aba Campanha
+// já dá um CPL por campanha, não só o agregado do dia.
+function agruparPorOrigem(leads: Lead[]) {
+  const contagem = new Map<string, number>();
+  for (const lead of leads) {
+    const chave = rotuloOrigem(lead);
+    contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
+  }
+  return [...contagem.entries()].sort((a, b) => b[1] - a[1]);
+}
 
 function useExpansao() {
   const { user } = useAuth();
@@ -102,6 +125,7 @@ export default function ExpansaoFranquias() {
           <div className="p-2 space-y-2 bg-muted/20 max-h-[420px] overflow-y-auto">{itens.length === 0 && <p className="text-xs text-muted-foreground text-center py-5">Nenhum lead</p>}
             {itens.map((lead) => <Card key={lead.id} className="p-3 space-y-2"><div className="flex justify-between gap-2"><strong className="text-sm truncate">{lead.nome}</strong>
               <Button size="icon" variant="ghost" aria-label={`Editar ${lead.nome}`} onClick={() => setEditando(lead)}><Pencil className="h-4 w-4" /></Button></div>
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Tag className="h-3 w-3" />{rotuloOrigem(lead)}</span>
               {lead.cidade && <p className="text-xs text-muted-foreground">{lead.cidade}{lead.estado ? `/${lead.estado}` : ""}</p>}
               <p className="text-xs text-muted-foreground">Entrada (Brasília): {dataHoraLead(lead.created_at)}</p>
               {lead.whatsapp && <div className="flex gap-1"><a className="text-xs border rounded px-2 py-1 flex-1 text-center" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}><MessageCircle className="inline h-3 w-3 mr-1" />WhatsApp</a>
@@ -112,13 +136,17 @@ export default function ExpansaoFranquias() {
             </Card>)}</div></section>; })}
       </div>
       <Card className="p-4"><h2 className="font-semibold mb-3">Todos os leads · {encontrados.length}</h2>
-        {encontrados.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum interessado encontrado.</p> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-2">Nome</th><th className="p-2">Contato</th><th className="p-2">Cidade</th><th className="p-2">Fase</th><th className="p-2">Responsável</th><th className="p-2">Entrada (Brasília)</th></tr></thead>
-          <tbody>{encontrados.map((lead) => <tr key={lead.id} className="border-b cursor-pointer hover:bg-muted/40" onClick={() => setEditando(lead)}><td className="p-2 font-medium">{lead.nome}</td><td className="p-2">{lead.whatsapp || lead.email}</td><td className="p-2">{lead.cidade || "—"}</td>
+        {encontrados.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum interessado encontrado.</p> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-2">Nome</th><th className="p-2">Contato</th><th className="p-2">Cidade</th><th className="p-2">Origem</th><th className="p-2">Fase</th><th className="p-2">Responsável</th><th className="p-2">Entrada (Brasília)</th></tr></thead>
+          <tbody>{encontrados.map((lead) => <tr key={lead.id} className="border-b cursor-pointer hover:bg-muted/40" onClick={() => setEditando(lead)}><td className="p-2 font-medium">{lead.nome}</td><td className="p-2">{lead.whatsapp || lead.email}</td><td className="p-2">{lead.cidade || "—"}</td><td className="p-2 text-muted-foreground">{rotuloOrigem(lead)}</td>
             <td className="p-2">{FASES.find((f) => f.id === lead.fase)?.nome}</td><td className="p-2">{responsaveis.find((r) => r.id === lead.responsavel_id)?.nome || "—"}</td><td className="p-2">{dataHoraLead(lead.created_at)}</td></tr>)}</tbody></table></div>}</Card>
     </> : <>
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><Indicador label="Gasto total" value={formatCurrency(totais.gasto)} /><Indicador label="Impressões" value={totais.impressoes.toLocaleString("pt-BR")} />
         <Indicador label="Cliques" value={totais.cliques.toLocaleString("pt-BR")} /><Indicador label="Leads" value={totais.leads.toLocaleString("pt-BR")} />
         <Indicador label="CPL" value={formatCurrency(totais.leads ? totais.gasto / totais.leads : 0)} /><Indicador label="CTR" value={`${totais.impressoes ? (totais.cliques / totais.impressoes * 100).toFixed(2) : "0"}%`} /></div>
+      <Card className="p-4 space-y-3"><div><h2 className="font-semibold">Leads por origem</h2>
+        <p className="text-xs text-muted-foreground">De onde vieram os leads ainda ativos, pelo UTM/campanha gravado na captura. Cruze com o gasto abaixo pra ter uma ideia de CPL por campanha, mesmo antes de ligar o Meta Ads automático.</p></div>
+        {leads.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum lead registrado.</p> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-2">Origem</th><th className="p-2">Leads</th></tr></thead>
+          <tbody>{agruparPorOrigem(leads).map(([origem, qtd]) => <tr key={origem} className="border-b"><td className="p-2">{origem}</td><td className="p-2">{qtd}</td></tr>)}</tbody></table></div>}</Card>
       <Card className="p-4 space-y-3"><div className="flex justify-between"><h2 className="font-semibold">Histórico de campanha</h2><Button size="sm" onClick={() => setCampanha(null)}><Plus className="h-4 w-4 mr-1" /> Registrar métricas</Button></div>
         {campanhas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma campanha registrada.</p> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-2">Data</th><th className="p-2">Gasto</th><th className="p-2">Impressões</th><th className="p-2">Cliques</th><th className="p-2">Leads</th><th className="p-2">CPL</th><th className="p-2">CTR</th><th className="p-2">Ação</th></tr></thead>
           <tbody>{campanhas.map((item) => <tr key={item.id} className="border-b"><td className="p-2">{item.data.split("-").reverse().join("/")}</td><td className="p-2">{formatCurrency(Number(item.gasto))}</td><td className="p-2">{item.impressoes}</td><td className="p-2">{item.cliques}</td><td className="p-2">{item.leads_count}</td><td className="p-2">{formatCurrency(Number(item.cpl))}</td><td className="p-2">{Number(item.ctr).toFixed(2)}%</td>
@@ -213,6 +241,16 @@ function LeadDialog({ lead, responsaveis, fechar }: { lead: Lead | null; respons
   return <Dialog open onOpenChange={(open) => { if (!open && !salvando) fechar(); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{lead ? "Editar interessado" : "Novo interessado"}</DialogTitle>
     <DialogDescription>Lead para compra de franquia. Estes contatos são visíveis somente à administração.
       {lead && <span className="block mt-1">Entrada: {dataHoraLead(lead.created_at)} (Brasília)</span>}</DialogDescription></DialogHeader>
+    {lead && (lead.utm_source || lead.utm_campaign || lead.utm_medium || lead.fbclid || lead.gclid) && (
+      <div className="rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground space-y-0.5">
+        <p className="font-semibold text-foreground flex items-center gap-1"><Tag className="h-3 w-3" /> Origem deste lead (gravada automaticamente)</p>
+        {lead.utm_source && <p>Fonte: {lead.utm_source}</p>}
+        {lead.utm_medium && <p>Mídia: {lead.utm_medium}</p>}
+        {lead.utm_campaign && <p>Campanha: {lead.utm_campaign}</p>}
+        {lead.utm_content && <p>Anúncio/conteúdo: {lead.utm_content}</p>}
+        {(lead.fbclid || lead.gclid) && <p>Clique de anúncio: {lead.fbclid ? "Meta Ads" : "Google Ads"}</p>}
+      </div>
+    )}
     {lead?.whatsapp && <div className="space-y-2"><h3 className="font-semibold text-sm">WhatsApp</h3><ChatWhatsAppExpansao lead={lead} /></div>}
     <form onSubmit={(e) => void salvar(e)} className="space-y-4"><fieldset disabled={salvando} className="space-y-4"><div className="grid gap-3 sm:grid-cols-2">
       <Campo id="exp-nome" label="Nome *"><Input id="exp-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={160} required /></Campo>

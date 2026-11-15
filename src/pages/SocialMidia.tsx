@@ -7,7 +7,7 @@ import { useViewAs } from "@/contexts/ViewAsContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { todasPaginas } from "@/lib/financeiro";
-import { SOCIAL_STATUS, SOCIAL_TIPOS } from "@/lib/social";
+import { SOCIAL_CATEGORIAS, SOCIAL_STATUS, SOCIAL_TIPOS } from "@/lib/social";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,9 +19,9 @@ import { CopiesAnuncios } from "@/components/social/CopiesAnuncios";
 
 type Post = Database["public"]["Tables"]["franquia_social_posts"]["Row"];
 type Escopo = "franqueadora" | "unidade";
-type Formulario = Pick<Post, "titulo" | "legenda" | "tipo" | "status" | "data_publicacao" | "hora_publicacao" | "media_url" | "observacoes">;
+type Formulario = Pick<Post, "titulo" | "legenda" | "tipo" | "categoria" | "status" | "data_publicacao" | "hora_publicacao" | "media_url" | "observacoes">;
 const hojeLocal = () => { const agora = new Date(); return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`; };
-const vazio = (data?: string): Formulario => ({ titulo: "", legenda: "", tipo: "reel", status: "planejado",
+const vazio = (data?: string): Formulario => ({ titulo: "", legenda: "", tipo: "reel", categoria: "corte", status: "planejado",
   data_publicacao: data || hojeLocal(), hora_publicacao: null, media_url: null, observacoes: "" });
 const dataBR = (valor: string | null) => valor ? `${valor.slice(8, 10)}/${valor.slice(5, 7)}/${valor.slice(0, 4)}` : "Sem data";
 const classeCampo = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
@@ -43,6 +43,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const [quadro, setQuadro] = useState<"cortes" | "copies">("cortes");
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("todos");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   const [mes, setMes] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [editando, setEditando] = useState<Post | null | undefined>();
   const [form, setForm] = useState<Formulario>(() => vazio());
@@ -57,11 +58,12 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
     }) });
   const posts = consulta.data ?? [];
   const filtrados = posts.filter((post) => (statusFiltro === "todos" || post.status === statusFiltro) &&
+    (categoriaFiltro === "todas" || post.categoria === categoriaFiltro) &&
     `${post.titulo} ${post.legenda} ${post.observacoes}`.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR")));
 
   function abrir(post?: Post, data?: string) {
     setEditando(post ?? null);
-    setForm(post ? { titulo: post.titulo, legenda: post.legenda, tipo: post.tipo, status: post.status,
+    setForm(post ? { titulo: post.titulo, legenda: post.legenda, tipo: post.tipo, categoria: post.categoria, status: post.status,
       data_publicacao: post.data_publicacao, hora_publicacao: post.hora_publicacao,
       media_url: post.media_url, observacoes: post.observacoes } : vazio(data));
   }
@@ -136,7 +138,8 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const urlFormulario = linkSeguro(form.media_url);
   const conteudo = (post: Post) => <Card key={post.id} className="p-3 space-y-2 hover:border-primary/40">
     <button className="w-full text-left" onClick={() => abrir(post)}>
-      <p className="font-semibold text-sm line-clamp-2">{post.titulo}</p>
+      <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{SOCIAL_CATEGORIAS.find((cat) => cat.id === post.categoria)?.label ?? post.categoria}</span>
+      <p className="font-semibold text-sm line-clamp-2 mt-1">{post.titulo}</p>
       <p className="text-xs text-muted-foreground mt-1">{dataBR(post.data_publicacao)}{post.hora_publicacao ? ` às ${post.hora_publicacao.slice(0, 5)}` : ""} · {SOCIAL_TIPOS.find((tipo) => tipo.id === post.tipo)?.label}</p>
     </button>
     <div className="flex items-center gap-2">
@@ -164,6 +167,10 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
     <Card className="p-4 border-primary/20 bg-primary/5"><p className="font-semibold">Calendário editorial</p>
       <p className="text-sm text-muted-foreground">“Programado” registra a data no planejamento. A publicação na rede social continua manual até conectar uma conta da plataforma.</p></Card>
 
+    <div role="tablist" aria-label="Filtrar por categoria" className="inline-flex flex-wrap gap-1 rounded-lg border bg-muted/30 p-1 w-fit">
+      <Button role="tab" aria-selected={categoriaFiltro === "todas"} size="sm" variant={categoriaFiltro === "todas" ? "default" : "ghost"} onClick={() => setCategoriaFiltro("todas")}>Todas</Button>
+      {SOCIAL_CATEGORIAS.map((cat) => <Button key={cat.id} role="tab" aria-selected={categoriaFiltro === cat.id} size="sm" variant={categoriaFiltro === cat.id ? "default" : "ghost"} onClick={() => setCategoriaFiltro(cat.id)}>{cat.label}</Button>)}
+    </div>
     <div className="flex flex-wrap gap-2 items-center"><div className="relative flex-1 min-w-48 max-w-sm"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
       <Input aria-label="Buscar conteúdos" className="pl-9" placeholder="Buscar conteúdo..." value={busca} onChange={(e) => setBusca(e.target.value)} /></div>
       <select aria-label="Filtrar status" value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)} className="rounded-md border bg-background px-3 py-2 text-sm">
@@ -199,7 +206,8 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
         <form onSubmit={(e) => void salvar(e)} className="space-y-3"><div><Label htmlFor="social-titulo">Título *</Label><Input id="social-titulo" required maxLength={160} minLength={2} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="social-data">Data planejada</Label><Input id="social-data" type="date" value={form.data_publicacao ?? ""} onChange={(e) => setForm({ ...form, data_publicacao: e.target.value || null })} /></div>
             <div><Label htmlFor="social-hora">Hora (Brasília)</Label><Input id="social-hora" type="time" value={form.hora_publicacao?.slice(0, 5) ?? ""} onChange={(e) => setForm({ ...form, hora_publicacao: e.target.value || null })} /></div>
-            <div><Label htmlFor="social-tipo">Tipo</Label><select id="social-tipo" className={classeCampo} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>{SOCIAL_TIPOS.map((tipo) => <option key={tipo.id} value={tipo.id}>{tipo.label}</option>)}</select></div></div>
+            <div><Label htmlFor="social-tipo">Tipo</Label><select id="social-tipo" className={classeCampo} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>{SOCIAL_TIPOS.map((tipo) => <option key={tipo.id} value={tipo.id}>{tipo.label}</option>)}</select></div>
+            <div><Label htmlFor="social-categoria">Categoria</Label><select id="social-categoria" className={classeCampo} value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>{SOCIAL_CATEGORIAS.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></div></div>
           <div><Label htmlFor="social-status">Status</Label><select id="social-status" className={classeCampo} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>{SOCIAL_STATUS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
           <div><Label htmlFor="social-midia-url">Link do vídeo ou arte</Label><div className="flex flex-wrap gap-2">
             <Input id="social-midia-url" type="url" placeholder="https://drive.google.com/..." maxLength={2000}

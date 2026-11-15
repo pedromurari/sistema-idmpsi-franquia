@@ -46,6 +46,9 @@ Deno.serve(async (req) => {
   const { error } = await admin.from("franquia_expansao_leads").insert({
     nome: entrada.nome, whatsapp: entrada.whatsapp, email: entrada.email,
     cidade: entrada.cidade, estado: entrada.estado, origem: "captura",
+    utm_source: entrada.utmSource, utm_medium: entrada.utmMedium, utm_campaign: entrada.utmCampaign,
+    utm_content: entrada.utmContent, utm_term: entrada.utmTerm, fbclid: entrada.fbclid, gclid: entrada.gclid,
+    referrer_host: entrada.referrerHost, landing_path: entrada.landingPath,
     dados_extras: { consentimento_contato_em: new Date().toISOString(), versao_consentimento: "2026-10",
       ...(entrada.motivacao ? { motivacao: entrada.motivacao } : {}) },
   });
