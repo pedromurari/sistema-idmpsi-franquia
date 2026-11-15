@@ -138,7 +138,7 @@ TEMPLATES = {
 
     "confirmacao": dict(
         arquivo="03-confirmar-cadastro.html",
-        assunto="Confirme seu e-mail &mdash; Portal IDM PSI",
+        assunto="Confirme seu e-mail - Portal IDM PSI",
         titulo="Confirme seu e-mail",
         previa="Um clique para confirmar seu endere&ccedil;o e liberar o acesso.",
         corpo=paragrafo("Falta s&oacute; confirmar que <strong>{{ .Email }}</strong> &eacute; mesmo o seu endere&ccedil;o para liberar o acesso ao portal."),
@@ -155,7 +155,7 @@ TEMPLATES = {
 
     "troca_email": dict(
         arquivo="05-trocar-email.html",
-        assunto="Confirme seu novo e-mail &mdash; Portal IDM PSI",
+        assunto="Confirme seu novo e-mail - Portal IDM PSI",
         titulo="Confirme a troca de e-mail",
         previa="Confirme o novo endere&ccedil;o da sua conta.",
         corpo=paragrafo("Pediram para trocar o e-mail da sua conta de <strong>{{ .Email }}</strong> para <strong>{{ .NewEmail }}</strong>.")
@@ -165,7 +165,7 @@ TEMPLATES = {
 
     "reautenticacao": dict(
         arquivo="06-reautenticacao.html",
-        assunto="Seu c&oacute;digo de confirma&ccedil;&atilde;o &mdash; Portal IDM PSI",
+        assunto="Seu codigo de confirmacao - Portal IDM PSI",
         titulo="Seu c&oacute;digo de confirma&ccedil;&atilde;o",
         previa="C&oacute;digo de uso &uacute;nico para confirmar a a&ccedil;&atilde;o no portal.",
         corpo=paragrafo("Digite o c&oacute;digo abaixo no portal para confirmar a a&ccedil;&atilde;o que voc&ecirc; iniciou."),
