@@ -966,11 +966,13 @@ export type Database = {
           hora_publicacao: string | null
           id: string
           legenda: string
+          legenda_shorts: string
           media_url: string | null
           observacoes: string
           status: string
           tipo: string
           titulo: string
+          titulo_shorts: string
           updated_at: string
         }
         Insert: {
@@ -983,11 +985,13 @@ export type Database = {
           hora_publicacao?: string | null
           id?: string
           legenda?: string
+          legenda_shorts?: string
           media_url?: string | null
           observacoes?: string
           status?: string
           tipo?: string
           titulo: string
+          titulo_shorts?: string
           updated_at?: string
         }
         Update: {
@@ -1000,11 +1004,13 @@ export type Database = {
           hora_publicacao?: string | null
           id?: string
           legenda?: string
+          legenda_shorts?: string
           media_url?: string | null
           observacoes?: string
           status?: string
           tipo?: string
           titulo?: string
+          titulo_shorts?: string
           updated_at?: string
         }
         Relationships: [

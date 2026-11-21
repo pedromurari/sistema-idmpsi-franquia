@@ -19,10 +19,14 @@ import { CopiesAnuncios } from "@/components/social/CopiesAnuncios";
 
 type Post = Database["public"]["Tables"]["franquia_social_posts"]["Row"];
 type Escopo = "franqueadora" | "unidade";
-type Formulario = Pick<Post, "titulo" | "legenda" | "tipo" | "categoria" | "status" | "data_publicacao" | "hora_publicacao" | "media_url" | "observacoes">;
+type Formulario = Pick<Post, "titulo" | "legenda" | "titulo_shorts" | "legenda_shorts" | "tipo" | "categoria" | "status" | "data_publicacao" | "hora_publicacao" | "media_url" | "observacoes">;
 const hojeLocal = () => { const agora = new Date(); return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`; };
-const vazio = (data?: string): Formulario => ({ titulo: "", legenda: "", tipo: "reel", categoria: "corte", status: "planejado",
+const vazio = (data?: string): Formulario => ({ titulo: "", legenda: "", titulo_shorts: "", legenda_shorts: "", tipo: "reel", categoria: "corte", status: "planejado",
   data_publicacao: data || hojeLocal(), hora_publicacao: null, media_url: null, observacoes: "" });
+// O YouTube aceita 100 caracteres no título, mas o feed do Shorts corta bem
+// antes -- por isso o aviso visual começa em 60.
+const LIMITE_TITULO_SHORTS = 100;
+const ALVO_TITULO_SHORTS = 60;
 const dataBR = (valor: string | null) => valor ? `${valor.slice(8, 10)}/${valor.slice(5, 7)}/${valor.slice(0, 4)}` : "Sem data";
 const classeCampo = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 const linkSeguro = (valor: string | null | undefined) => {
@@ -59,11 +63,12 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
   const posts = consulta.data ?? [];
   const filtrados = posts.filter((post) => (statusFiltro === "todos" || post.status === statusFiltro) &&
     (categoriaFiltro === "todas" || post.categoria === categoriaFiltro) &&
-    `${post.titulo} ${post.legenda} ${post.observacoes}`.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR")));
+    `${post.titulo} ${post.legenda} ${post.titulo_shorts} ${post.legenda_shorts} ${post.observacoes}`.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR")));
 
   function abrir(post?: Post, data?: string) {
     setEditando(post ?? null);
-    setForm(post ? { titulo: post.titulo, legenda: post.legenda, tipo: post.tipo, categoria: post.categoria, status: post.status,
+    setForm(post ? { titulo: post.titulo, legenda: post.legenda, titulo_shorts: post.titulo_shorts,
+      legenda_shorts: post.legenda_shorts, tipo: post.tipo, categoria: post.categoria, status: post.status,
       data_publicacao: post.data_publicacao, hora_publicacao: post.hora_publicacao,
       media_url: post.media_url, observacoes: post.observacoes } : vazio(data));
   }
@@ -76,6 +81,7 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
     }
     setSalvando(true);
     const valores = { ...form, titulo: form.titulo.trim(), legenda: form.legenda.trim(),
+      titulo_shorts: form.titulo_shorts.trim(), legenda_shorts: form.legenda_shorts.trim(),
       observacoes: form.observacoes.trim(), media_url: form.media_url?.trim() || null,
       data_publicacao: form.data_publicacao || null, hora_publicacao: form.hora_publicacao || null };
     const resultado = editando
@@ -216,7 +222,20 @@ export default function SocialMidia({ escopo }: { escopo: Escopo }) {
               <ExternalLink className="mr-1 h-4 w-4" /> Abrir link</a></Button>
               : <Button type="button" variant="outline" disabled><ExternalLink className="mr-1 h-4 w-4" /> Abrir link</Button>}
           </div></div>
-          <div><Label htmlFor="social-legenda">Legenda</Label><textarea id="social-legenda" className={`${classeCampo} min-h-24`} maxLength={5000} value={form.legenda} onChange={(e) => setForm({ ...form, legenda: e.target.value })} /></div>
+          <div><Label htmlFor="social-legenda">Legenda (Instagram / Reels)</Label><textarea id="social-legenda" className={`${classeCampo} min-h-24`} maxLength={5000} value={form.legenda} onChange={(e) => setForm({ ...form, legenda: e.target.value })} /></div>
+          <div className="rounded-md border border-dashed border-muted-foreground/40 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">Copy do YouTube Shorts (título curto e descrição própria)</p>
+            <div><Label htmlFor="social-titulo-shorts">Título do Shorts</Label>
+              <Input id="social-titulo-shorts" maxLength={LIMITE_TITULO_SHORTS} value={form.titulo_shorts}
+                onChange={(e) => setForm({ ...form, titulo_shorts: e.target.value })} />
+              <p className={`mt-1 text-xs ${form.titulo_shorts.length > ALVO_TITULO_SHORTS ? "text-amber-600" : "text-muted-foreground"}`}>
+                {form.titulo_shorts.length}/{LIMITE_TITULO_SHORTS} caracteres
+                {form.titulo_shorts.length > ALVO_TITULO_SHORTS ? " — acima de 60 o feed do Shorts corta o título" : ""}
+              </p></div>
+            <div><Label htmlFor="social-legenda-shorts">Descrição do Shorts</Label>
+              <textarea id="social-legenda-shorts" className={`${classeCampo} min-h-20`} maxLength={5000}
+                value={form.legenda_shorts} onChange={(e) => setForm({ ...form, legenda_shorts: e.target.value })} /></div>
+          </div>
           <div><Label htmlFor="social-observacoes">Observações internas</Label><textarea id="social-observacoes" className={`${classeCampo} min-h-20`} maxLength={5000} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} /></div>
           <div className="flex justify-between gap-2 pt-2">{editando ? <Button type="button" variant="destructive" onClick={() => void excluir(editando)}><Trash2 className="mr-1 h-4 w-4" /> Excluir</Button> : <span />}
             <div className="flex gap-2"><Button type="button" variant="outline" onClick={() => setEditando(undefined)}>Cancelar</Button><Button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</Button></div></div>
